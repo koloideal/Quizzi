@@ -11,7 +11,7 @@ class BotConfig:
 @dataclass
 class DatabaseConfig:
     host: str
-    port: int
+    port: int | str
     user: str
     password: str
     database: str
@@ -29,9 +29,20 @@ class AppConfig:
     @classmethod
     def from_toml(cls, path: str | Path = "config.toml") -> "AppConfig":
         with open(path, "rb") as f:
-            data = tomllib.load(f)
+            data: dict[str, dict[str, str]] = tomllib.load(f)
+        
+        bot_data: dict[str, str] = data["bot"]
+        db_data: dict[str, str] = data["database"]
         
         return cls(
-            bot=BotConfig(**data["bot"]),
-            database=DatabaseConfig(**data["database"])
+            bot=BotConfig(
+                token=bot_data["token"]
+            ),
+            database=DatabaseConfig(
+                host=db_data["host"],
+                port=db_data["port"],
+                user=db_data["user"],
+                password=db_data["password"],
+                database=db_data["database"]
+            )
         )
