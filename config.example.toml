@@ -1,0 +1,9 @@
+[bot]
+token = "1234567890:ABCdefGHIjklMNOpqrsTUVwxyz"
+
+[database]
+host = "localhost"
+port = 5432
+user = "trudex_user"
+password = "secure_password"
+database = "trudex_db"

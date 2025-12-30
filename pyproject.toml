@@ -1,0 +1,17 @@
+[project]
+name = "trudex"
+version = "0.1.0"
+description = "Telegram платформа для тестирования по охране труда"
+readme = "README.md"
+requires-python = ">=3.12,<3.14"
+dependencies = [
+    "aiogram>=3.23.0",
+    "aiogram-dialog>=2.4.0",
+    "alembic>=1.17.2",
+    "asyncpg>=0.31.0",
+    "dishka>=1.7.2",
+    "httpx>=0.28.1",
+    "sqlalchemy>=2.0.45",
+    "apscheduler>=3.10.4",
+    "pydantic>=2.10.5",
+]
