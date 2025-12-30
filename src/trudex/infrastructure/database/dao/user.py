@@ -1,6 +1,8 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from trudex.domain.schemas import User as DomainUser
+from trudex.infrastructure.database.dto.user import UserDTO
 from trudex.infrastructure.database.models import User
 
 
@@ -8,27 +10,31 @@ class UserDAO:
     def __init__(self, session: AsyncSession) -> None:
         self.session: AsyncSession = session
     
-    async def get_by_id(self, user_id: int) -> User | None:
+    async def get_by_id(self, user_id: int) -> DomainUser | None:
         result = await self.session.execute(
             select(User).where(User.id == user_id)
         )
-        return result.scalar_one_or_none()
+        model = result.scalar_one_or_none()
+        return UserDTO(model).to_domain() if model else None
     
-    async def get_all(self) -> list[User]:
+    async def get_all(self) -> list[DomainUser]:
         result = await self.session.execute(select(User))
-        return list(result.scalars().all())
+        models = list(result.scalars().all())
+        return [UserDTO(model).to_domain() for model in models]
     
-    async def get_by_group(self, group: int) -> list[User]:
+    async def get_by_group(self, group: int) -> list[DomainUser]:
         result = await self.session.execute(
             select(User).where(User.group == group)
         )
-        return list(result.scalars().all())
+        models = list(result.scalars().all())
+        return [UserDTO(model).to_domain() for model in models]
     
-    async def get_admins(self) -> list[User]:
+    async def get_admins(self) -> list[DomainUser]:
         result = await self.session.execute(
             select(User).where(User.is_admin == True)
         )
-        return list(result.scalars().all())
+        models = list(result.scalars().all())
+        return [UserDTO(model).to_domain() for model in models]
     
     async def create(
         self,
@@ -38,7 +44,7 @@ class UserDAO:
         last_name: str | None = None,
         group: int | None = None,
         is_admin: bool = False,
-    ) -> User:
+    ) -> DomainUser:
         user = User(
             id=user_id,
             username=username,
@@ -49,7 +55,8 @@ class UserDAO:
         )
         self.session.add(user)
         await self.session.flush()
-        return user
+        await self.session.refresh(user)
+        return UserDTO(user).to_domain()
     
     async def update(
         self,
@@ -59,8 +66,11 @@ class UserDAO:
         last_name: str | None = None,
         group: int | None = None,
         is_admin: bool | None = None,
-    ) -> User | None:
-        user = await self.get_by_id(user_id)
+    ) -> DomainUser | None:
+        result = await self.session.execute(
+            select(User).where(User.id == user_id)
+        )
+        user = result.scalar_one_or_none()
         if not user:
             return None
         
@@ -76,10 +86,14 @@ class UserDAO:
             user.is_admin = is_admin
         
         await self.session.flush()
-        return user
+        await self.session.refresh(user)
+        return UserDTO(user).to_domain()
     
     async def delete(self, user_id: int) -> bool:
-        user = await self.get_by_id(user_id)
+        result = await self.session.execute(
+            select(User).where(User.id == user_id)
+        )
+        user = result.scalar_one_or_none()
         if not user:
             return False
         
@@ -95,8 +109,12 @@ class UserDAO:
         last_name: str | None = None,
         group: int | None = None,
         is_admin: bool = False,
-    ) -> User:
-        user = await self.get_by_id(user_id)
+    ) -> DomainUser:
+        result = await self.session.execute(
+            select(User).where(User.id == user_id)
+        )
+        user = result.scalar_one_or_none()
+        
         if user:
             if username is not None:
                 user.username = username
@@ -109,7 +127,8 @@ class UserDAO:
             if is_admin is not None:
                 user.is_admin = is_admin
             await self.session.flush()
-            return user
+            await self.session.refresh(user)
+            return UserDTO(user).to_domain()
         
         return await self.create(
             user_id=user_id,
