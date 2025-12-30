@@ -1,6 +1,7 @@
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Self
 
 
 @dataclass
@@ -22,12 +23,12 @@ class DatabaseConfig:
 
 
 @dataclass
-class AppConfig:
+class Config:
     bot: BotConfig
     database: DatabaseConfig
     
     @classmethod
-    def from_toml(cls, path: str | Path = "config.toml") -> "AppConfig":
+    def from_toml(cls, path: str | Path) -> Self:
         with open(path, "rb") as f:
             data: dict[str, dict[str, str]] = tomllib.load(f)
         
