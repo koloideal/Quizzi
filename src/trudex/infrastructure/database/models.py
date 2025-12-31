@@ -1,6 +1,5 @@
 from datetime import datetime
 from enum import Enum
-from tokenize import group
 from typing import final
 
 from sqlalchemy import BigInteger, CheckConstraint, ForeignKey, Integer, String, Text, func
@@ -30,6 +29,7 @@ class QuestionType(str, Enum):
     MULTIPLE = "multiple"
     INPUT = "input"
 
+
 @final
 class Test(Base):
     __tablename__ = "tests"
@@ -37,14 +37,17 @@ class Test(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     title: Mapped[str] = mapped_column(String(255))
     description: Mapped[str | None] = mapped_column(Text)
-    for_group: Mapped[int | None] = mapped_column(default=None) 
+    for_group: Mapped[int | None] = mapped_column(default=None)
     is_active: Mapped[bool] = mapped_column(default=True)
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now())
 
     questions: Mapped[list["Question"]] = relationship(
         back_populates="test",
         cascade="all, delete-orphan",
         order_by="Question.position"
     )
+
 
 @final
 class Question(Base):
@@ -62,6 +65,7 @@ class Question(Base):
         back_populates="question",
         cascade="all, delete-orphan"
     )
+
 
 @final
 class Option(Base):

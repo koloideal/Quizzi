@@ -22,20 +22,6 @@ class UserDAO:
         models = list(result.scalars().all())
         return [UserDTO(model).to_domain() for model in models]
     
-    async def get_by_group(self, group: int) -> list[DomainUser]:
-        result = await self.session.execute(
-            select(User).where(User.group == group)
-        )
-        models = list(result.scalars().all())
-        return [UserDTO(model).to_domain() for model in models]
-    
-    async def get_admins(self) -> list[DomainUser]:
-        result = await self.session.execute(
-            select(User).where(User.is_admin == True)
-        )
-        models = list(result.scalars().all())
-        return [UserDTO(model).to_domain() for model in models]
-    
     async def create(
         self,
         user_id: int,
