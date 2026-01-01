@@ -78,3 +78,39 @@ class Option(Base):
     explanation: Mapped[str | None] = mapped_column(Text)
 
     question: Mapped["Question"] = relationship(back_populates="options")
+
+
+@final
+class TestAttempt(Base):
+    __tablename__ = "test_attempts"
+    
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(BigInteger, index=True)
+    test_id: Mapped[int] = mapped_column(ForeignKey("tests.id"))
+    started_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    finished_at: Mapped[datetime | None] = mapped_column(default=None)
+    score: Mapped[int] = mapped_column(Integer, default=0)
+    is_passed: Mapped[bool] = mapped_column(default=False)
+    
+    test: Mapped["Test"] = relationship()
+    answers: Mapped[list["UserAnswer"]] = relationship(
+        back_populates="attempt",
+        cascade="all, delete-orphan"
+    )
+
+
+@final
+class UserAnswer(Base):
+    __tablename__ = "user_answers"
+    
+    id: Mapped[int] = mapped_column(primary_key=True)
+    attempt_id: Mapped[int] = mapped_column(ForeignKey("test_attempts.id"))
+    question_id: Mapped[int] = mapped_column(ForeignKey("questions.id"))
+    selected_option_id: Mapped[int | None] = mapped_column(ForeignKey("options.id"), default=None)
+    text_answer: Mapped[str | None] = mapped_column(Text, default=None)
+    is_correct: Mapped[bool] = mapped_column(default=False)
+    
+    attempt: Mapped["TestAttempt"] = relationship(back_populates="answers")
+    question: Mapped["Question"] = relationship()
+    selected_option: Mapped["Option | None"] = relationship()
+

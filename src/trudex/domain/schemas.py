@@ -42,3 +42,24 @@ class Option:
     text: str
     is_correct: bool = False
     explanation: str | None = None
+
+
+@dataclass
+class TestAttempt:
+    id: int
+    user_id: int
+    test_id: int
+    started_at: datetime
+    finished_at: datetime | None = None
+    score: int = 0
+    is_passed: bool = False
+
+
+@dataclass
+class UserAnswer:
+    id: int
+    attempt_id: int
+    question_id: int
+    selected_option_id: int | None = None
+    text_answer: str | None = None
+    is_correct: bool = False

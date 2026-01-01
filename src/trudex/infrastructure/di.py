@@ -7,8 +7,11 @@ from trudex.infrastructure.database.config import new_session_maker
 from trudex.infrastructure.database.dao.option import OptionDAO
 from trudex.infrastructure.database.dao.question import QuestionDAO
 from trudex.infrastructure.database.dao.test import TestDAO
+from trudex.infrastructure.database.dao.test_attempt import TestAttemptDAO
 from trudex.infrastructure.database.dao.user import UserDAO
+from trudex.infrastructure.database.dao.user_answer import UserAnswerDAO
 from trudex.infrastructure.database.repo.test import TestRepository
+from trudex.infrastructure.database.repo.test_attempt import TestAttemptRepository
 from trudex.infrastructure.database.repo.user import UserRepository
 from trudex.infrastructure.utils.config import Config
 
@@ -46,9 +49,21 @@ class DatabaseProvider(Provider):
         return OptionDAO(session)
     
     @provide(scope=Scope.REQUEST)
+    def get_test_attempt_dao(self, session: AsyncSession) -> TestAttemptDAO:
+        return TestAttemptDAO(session)
+    
+    @provide(scope=Scope.REQUEST)
+    def get_user_answer_dao(self, session: AsyncSession) -> UserAnswerDAO:
+        return UserAnswerDAO(session)
+    
+    @provide(scope=Scope.REQUEST)
     def get_user_repository(self, session: AsyncSession) -> UserRepository:
         return UserRepository(session)
     
     @provide(scope=Scope.REQUEST)
     def get_test_repository(self, session: AsyncSession) -> TestRepository:
         return TestRepository(session)
+    
+    @provide(scope=Scope.REQUEST)
+    def get_test_attempt_repository(self, session: AsyncSession) -> TestAttemptRepository:
+        return TestAttemptRepository(session)
