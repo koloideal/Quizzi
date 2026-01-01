@@ -7,6 +7,7 @@ from typing import Self
 @dataclass
 class BotConfig:
     token: str
+    creator_id: int
 
 
 @dataclass
@@ -30,20 +31,21 @@ class Config:
     @classmethod
     def from_toml(cls, path: str | Path) -> Self:
         with open(path, "rb") as f:
-            data: dict[str, dict[str, str]] = tomllib.load(f)
+            data: dict[str, dict[str, str | int]] = tomllib.load(f)
         
-        bot_data: dict[str, str] = data["bot"]
-        db_data: dict[str, str] = data["database"]
+        bot_data: dict[str, str | int] = data["bot"]
+        db_data: dict[str, str | int] = data["database"]
         
         return cls(
             bot=BotConfig(
-                token=bot_data["token"]
+                token=str(bot_data["token"]),
+                creator_id=int(bot_data["creator_id"])
             ),
             database=DatabaseConfig(
-                host=db_data["host"],
+                host=str(db_data["host"]),
                 port=db_data["port"],
-                user=db_data["user"],
-                password=db_data["password"],
-                database=db_data["database"]
+                user=str(db_data["user"]),
+                password=str(db_data["password"]),
+                database=str(db_data["database"])
             )
         )

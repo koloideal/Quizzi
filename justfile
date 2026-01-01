@@ -2,7 +2,7 @@ set windows-shell := ["powershell.exe", "-NoLogo", "-Command"]
 set shell := ["bash", "-c"]
 
 dev:
-    watchfiles --filter python "python -m trudex.application" src
+    watchfiles --filter python ".venv/Scripts/python -m trudex.application" src
 
 run:
     python -m trudex
