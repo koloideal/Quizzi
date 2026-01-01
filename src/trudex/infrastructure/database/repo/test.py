@@ -1,4 +1,5 @@
 from typing import final
+
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -145,11 +146,11 @@ class TestRepository:
             )
             
             for option in options:
-                _ = await self.option_dao.create(
-                        question_id=new_question.id,
-                        text=option.text,
-                        is_correct=option.is_correct,
-                        explanation=option.explanation,
-                    )
+                await self.option_dao.create(
+                    question_id=new_question.id,
+                    text=option.text,
+                    is_correct=option.is_correct,
+                    explanation=option.explanation,
+                )
         
         return new_test
