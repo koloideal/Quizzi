@@ -1,7 +1,7 @@
 from aiogram.types import CallbackQuery, Message
 from aiogram_dialog import Dialog, DialogManager, Window
 from aiogram_dialog.widgets.input import MessageInput
-from aiogram_dialog.widgets.kbd import Back, Button, Cancel, Column, Row, ScrollingGroup, Select
+from aiogram_dialog.widgets.kbd import Back, Button, Cancel, Column, Row, ScrollingGroup, Select, SwitchTo
 from aiogram_dialog.widgets.text import Const, Format
 from dishka import FromDishka
 from dishka.integrations.aiogram_dialog import inject
@@ -173,14 +173,14 @@ creator_menu_dialog = Dialog(
     Window(
         Const("<b>Введите ID или @username пользователя:</b>"),
         MessageInput(on_user_input),
-        Back(Const("◀️ Назад")),
+        SwitchTo(Const("◀️ Назад"), id="back_to_list", state=CreatorMenuSG.users_list),
         state=CreatorMenuSG.users_input,
     ),
     Window(
         Format("{user_info}"),
         Column(
             Button(Const("👑 Сделать администратором"), id="make_admin", on_click=on_make_admin_clicked, when="show_make_admin"),
-            Back(Const("◀️ Назад")),
+            SwitchTo(Const("◀️ Назад"), id="back_to_list", state=CreatorMenuSG.users_list),
         ),
         state=CreatorMenuSG.user_detail,
         getter=get_user_detail_data,

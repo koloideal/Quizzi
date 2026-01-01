@@ -13,7 +13,9 @@ from trudex.application.bot.creator_dialogs.main_menu import creator_menu_dialog
 from trudex.application.bot.handlers import router
 from trudex.application.bot.middlewares.reject_not_admin import RejectNotAdminMiddleware
 from trudex.application.bot.middlewares.reject_not_creator import RejectNotCreatorMiddleware
+from trudex.application.bot.user_dialogs.main_menu import user_menu_dialog
 from trudex.infrastructure.di import DatabaseProvider
+from trudex.infrastructure.utils.bot_commands import setup_bot_commands
 from trudex.infrastructure.utils.config import Config
 
 
@@ -35,12 +37,18 @@ async def main() -> None:
     dp.message.middleware(RejectNotCreatorMiddleware())
     dp.include_router(router)
     
+    dp.include_router(user_menu_dialog)
     dp.include_router(admin_menu_dialog)
     dp.include_router(creator_menu_dialog)
     
     container = make_async_container(DatabaseProvider())
     setup_dishka(container, dp, auto_inject=True)
     setup_dialogs(dp)
+    
+    async with container() as request_container:
+        from trudex.infrastructure.database.repo.user import UserRepository
+        user_repo = await request_container.get(UserRepository)
+        await setup_bot_commands(bot, config, user_repo)
     
     logging.info("Бот запущен")
     
