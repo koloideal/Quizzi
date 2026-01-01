@@ -31,6 +31,7 @@ class DatabaseProvider(Provider):
     ) -> AsyncIterable[AsyncSession]:
         async with session_maker() as session:
             yield session
+            await session.commit()
 
     @provide(scope=Scope.REQUEST)
     def get_user_dao(self, session: AsyncSession) -> UserDAO:

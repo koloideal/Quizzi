@@ -5,11 +5,10 @@ from aiogram import BaseMiddleware
 from aiogram.types import Message, TelegramObject
 from dishka import AsyncContainer
 
-from trudex.infrastructure.database.repo import UserRepository
 from trudex.infrastructure.utils.config import Config
 
 
-class RejectNotAdminMiddleware(BaseMiddleware):
+class RejectNotCreatorMiddleware(BaseMiddleware):
     async def __call__(
         self,
         handler: Callable[[TelegramObject, dict[str, Any]], Awaitable[Any]],
@@ -23,20 +22,15 @@ class RejectNotAdminMiddleware(BaseMiddleware):
         
         container: AsyncContainer = data["dishka_container"]
         user_id = event.from_user.id
-        admin_commands = ["/admin"]
+        creator_commands = ["/creator"]
         
-        if event.text and event.text.strip() in admin_commands:
+        if event.text and event.text.strip() in creator_commands:
             config: Config = await container.get(Config)
             
             if user_id == config.bot.creator_id:
                 return await handler(event, data)
             
-            users_repo: UserRepository = await container.get(UserRepository)
-            is_admin = await users_repo.is_admin(user_id)
-            
-            if is_admin:
-                return await handler(event, data)
-            
+            await event.answer("У вас нет доступа к панели создателя.")
             return
         
         return await handler(event, data)
