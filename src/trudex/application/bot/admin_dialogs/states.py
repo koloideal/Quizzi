@@ -6,3 +6,5 @@ class AdminMenuSG(StatesGroup):
     users_list = State()
     users_input = State()
     user_detail = State()
+    broadcast_input = State()
+    broadcast_confirm = State()

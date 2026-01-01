@@ -4,10 +4,12 @@ from aiogram_dialog.widgets.input import MessageInput
 from aiogram_dialog.widgets.kbd import Back, Button, Cancel, Column, Row, ScrollingGroup, Select, SwitchTo
 from aiogram_dialog.widgets.text import Const, Format
 from dishka import FromDishka
+from dishka.integrations.aiogram import CONTAINER_NAME
 from dishka.integrations.aiogram_dialog import inject
 
 from trudex.application.bot.creator_dialogs.states import CreatorMenuSG
 from trudex.infrastructure.database.dao.user import UserDAO
+from trudex.infrastructure.utils.broadcast import broadcast_message
 
 
 @inject
@@ -81,7 +83,6 @@ async def on_input_mode(_callback: CallbackQuery, _button: Button, manager: Dial
 
 
 async def on_user_input(message: Message, _widget: MessageInput, manager: DialogManager):
-    from dishka.integrations.aiogram import CONTAINER_NAME
     container = manager.middleware_data[CONTAINER_NAME]
     user_dao = await container.get(UserDAO)
     
@@ -108,7 +109,6 @@ async def on_make_admin_clicked(_callback: CallbackQuery, _button: Button, manag
 
 
 async def on_confirm_yes(_callback: CallbackQuery, _button: Button, manager: DialogManager):
-    from dishka.integrations.aiogram import CONTAINER_NAME
     container = manager.middleware_data[CONTAINER_NAME]
     user_dao = await container.get(UserDAO)
     
@@ -127,6 +127,46 @@ async def on_confirm_no(_callback: CallbackQuery, _button: Button, manager: Dial
     await manager.switch_to(CreatorMenuSG.user_detail)
 
 
+async def on_broadcast_input(message: Message, _widget: MessageInput, manager: DialogManager):
+    manager.dialog_data["broadcast_message_id"] = message.message_id
+    manager.dialog_data["broadcast_chat_id"] = message.chat.id
+    await manager.switch_to(CreatorMenuSG.broadcast_confirm)
+
+
+@inject
+async def on_broadcast_confirm(_callback: CallbackQuery, _button: Button, manager: DialogManager, user_dao: FromDishka[UserDAO]):
+    message_id = manager.dialog_data.get("broadcast_message_id")
+    chat_id = manager.dialog_data.get("broadcast_chat_id")
+    
+    if not message_id or not chat_id or not _callback.message:
+        await _callback.answer("Ошибка: сообщение не найдено")
+        return
+    
+    await _callback.message.answer("⏳ Рассылка началась...")
+    
+    bot = _callback.bot
+    if not bot:
+        await _callback.answer("Ошибка: бот не найден")
+        return
+    
+    stats = await broadcast_message(bot, message_id, chat_id, user_dao)
+    
+    stats_text = (
+        f"✅ <b>Рассылка завершена</b>\n\n"
+        f"Всего пользователей: {stats.total}\n"
+        f"Успешно отправлено: {stats.success}\n"
+        f"Не удалось отправить: {stats.failed}"
+    )
+    
+    await _callback.message.answer(stats_text)
+    await manager.done()
+
+
+async def on_broadcast_cancel(_callback: CallbackQuery, _button: Button, manager: DialogManager):
+    await _callback.answer("Рассылка отменена")
+    await manager.switch_to(CreatorMenuSG.main)
+
+
 async def on_tests_clicked(_callback: CallbackQuery, _button: Button, _manager: DialogManager) -> None:
     await _callback.answer("Тесты")
 
@@ -135,8 +175,8 @@ async def on_users_clicked(_callback: CallbackQuery, _button: Button, manager: D
     await manager.switch_to(CreatorMenuSG.users_list)
 
 
-async def on_broadcast_clicked(_callback: CallbackQuery, _button: Button, _manager: DialogManager) -> None:
-    await _callback.answer("Рассылка")
+async def on_broadcast_clicked(_callback: CallbackQuery, _button: Button, manager: DialogManager) -> None:
+    await manager.switch_to(CreatorMenuSG.broadcast_input)
 
 
 creator_menu_dialog = Dialog(
@@ -194,5 +234,19 @@ creator_menu_dialog = Dialog(
         ),
         state=CreatorMenuSG.make_admin_confirm,
         getter=get_confirm_data,
+    ),
+    Window(
+        Const("<b>📢 Рассылка</b>\n\nОтправьте сообщение, которое хотите разослать всем пользователям:"),
+        MessageInput(on_broadcast_input),
+        SwitchTo(Const("◀️ Отмена"), id="cancel_broadcast", state=CreatorMenuSG.main),
+        state=CreatorMenuSG.broadcast_input,
+    ),
+    Window(
+        Const("<b>⚠️ Подтверждение рассылки</b>\n\nВы уверены, что хотите отправить это сообщение всем пользователям?"),
+        Row(
+            Button(Const("✅ Да"), id="broadcast_confirm", on_click=on_broadcast_confirm),
+            Button(Const("❌ Нет"), id="broadcast_cancel", on_click=on_broadcast_cancel),
+        ),
+        state=CreatorMenuSG.broadcast_confirm,
     ),
 )
