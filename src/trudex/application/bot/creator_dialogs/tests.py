@@ -19,7 +19,7 @@ async def get_tests_data(test_dao: FromDishka[TestDAO], **_kwargs):
     
     return {
         "tests": [
-            (t.title, t.id)
+            (f"{'🟢' if t.is_active else '🔴'} {t.title}", t.id)
             for t in tests
         ],
         "count": len(tests),
