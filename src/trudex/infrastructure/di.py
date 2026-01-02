@@ -20,10 +20,6 @@ from trudex.infrastructure.utils.config import Config
 
 class DatabaseProvider(Provider):
     @provide(scope=Scope.APP)
-    def get_config(self) -> Config:
-        return Config.from_toml("config.toml")
-    
-    @provide(scope=Scope.APP)
     def get_session_maker(self, config: Config) -> async_sessionmaker[AsyncSession]:
         return new_session_maker(config.database.url)
 

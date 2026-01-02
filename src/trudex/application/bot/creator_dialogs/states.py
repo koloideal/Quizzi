@@ -15,7 +15,9 @@ class CreatorUsersSG(StatesGroup):
 class CreatorTestsSG(StatesGroup):
     tests_list = State()
     test_detail = State()
+    share_test = State()
     edit_password = State()
+    edit_attempts = State()
     edit_group = State()
     edit_expires = State()
 
@@ -36,6 +38,7 @@ class CreateTestSG(StatesGroup):
     input_title = State()
     input_description = State()
     input_password = State()
+    input_attempts = State()
     input_expires_at = State()
     input_for_group = State()
     confirm_test_info = State()

@@ -117,6 +117,8 @@ async def get_delete_confirm_data(dialog_manager: DialogManager, **_kwargs):
 @inject
 async def on_confirm_delete(_callback: CallbackQuery, _button: Button, manager: DialogManager, group_dao: FromDishka[GroupDAO]):
     group_id = manager.dialog_data.get("delete_group_id")
+
+    assert isinstance(group_id, int)
     
     await group_dao.delete(group_id)
     

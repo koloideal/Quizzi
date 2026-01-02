@@ -1,5 +1,6 @@
 from datetime import date, datetime
 
+from aiogram import Bot
 from aiogram.types import CallbackQuery, Message
 from aiogram_dialog import Dialog, DialogManager, StartMode, Window
 from aiogram_dialog.widgets.input import MessageInput
@@ -15,6 +16,8 @@ from trudex.application.bot.creator_dialogs.states import (CreateTestSG,
 from trudex.infrastructure.database.dao.group import GroupDAO
 from trudex.infrastructure.database.dao.test import TestDAO
 from trudex.infrastructure.database.repo.test import TestRepository
+from trudex.infrastructure.utils.config import Config
+from trudex.infrastructure.utils.test_id_to_hash import generate_alpha_id
 
 
 @inject
@@ -58,6 +61,7 @@ async def get_test_detail(test_dao: FromDishka[TestDAO], test_repo: FromDishka[T
     
     status = "🟢 Активен" if test.is_active else "🔴 Деактивирован"
     password_str = f"🔒 {test.password}" if test.password else "🔓 Без пароля"
+    attempts_str = f"🔄 {test.attempts}" if test.attempts else "♾️ Без ограничений"
     expires_str = test.expires_at.strftime("%d.%m.%Y %H:%M") if test.expires_at else "♾️ Без срока"
     group_str = f"🎓 Группа {test.for_group}" if test.for_group else "👥 Для всех"
     
@@ -68,6 +72,7 @@ async def get_test_detail(test_dao: FromDishka[TestDAO], test_repo: FromDishka[T
         f"<b>Статус:</b> {status}\n"
         f"<b>Вопросов:</b> {questions_count}\n"
         f"{password_str}\n"
+        f"<b>Попыток:</b> {attempts_str}\n"
         f"{expires_str}\n"
         f"{group_str}\n\n"
         f"<b>Создан:</b> {test.created_at.strftime('%d.%m.%Y %H:%M') if test.created_at else '—'}"
@@ -102,8 +107,36 @@ async def on_back_to_list(_callback: CallbackQuery, _button: Button, manager: Di
     await manager.switch_to(CreatorTestsSG.tests_list)
 
 
+async def on_share_test(_callback: CallbackQuery, _button: Button, manager: DialogManager):
+    await manager.switch_to(CreatorTestsSG.share_test)
+
+
+@inject
+async def get_share_link(dialog_manager: DialogManager, config: FromDishka[Config], **_kwargs):
+    test_id = dialog_manager.dialog_data.get("selected_test_id")
+    if not test_id:
+        return {"share_link": "Ошибка: тест не найден"}
+    
+    test_hash = generate_alpha_id(
+        test_id, 
+        config.security.test_hash_salt,
+        config.security.test_hash_length
+    )
+    bot = Bot(config.bot.token)
+    bot_info = await bot.get_me()
+    await bot.session.close()
+    bot_username = bot_info.username or "your_bot"
+    share_link = f"https://t.me/{bot_username}?start={test_hash}"
+    
+    return {"share_link": share_link}
+
+
 async def on_edit_password(_callback: CallbackQuery, _button: Button, manager: DialogManager):
     await manager.switch_to(CreatorTestsSG.edit_password)
+
+
+async def on_edit_attempts(_callback: CallbackQuery, _button: Button, manager: DialogManager):
+    await manager.switch_to(CreatorTestsSG.edit_attempts)
 
 
 async def on_edit_group(_callback: CallbackQuery, _button: Button, manager: DialogManager):
@@ -144,6 +177,50 @@ async def on_remove_password(_callback: CallbackQuery, _button: Button, manager:
     
     await test_dao.update(test_id, password=None)
     await _callback.answer("✅ Пароль удален")
+    await manager.switch_to(CreatorTestsSG.test_detail)
+
+
+@inject
+async def on_attempts_input_edit(message: Message, _widget: MessageInput, manager: DialogManager, test_dao: FromDishka[TestDAO]):
+    test_id = manager.dialog_data.get("selected_test_id")
+    if not test_id:
+        await message.answer("❌ Тест не найден")
+        return
+    
+    if not message.text:
+        await message.answer("❌ Количество попыток не может быть пустым")
+        return
+    
+    attempts_str = message.text.strip()
+    
+    if not attempts_str.isdigit():
+        await message.answer("❌ Количество попыток должно быть числом")
+        return
+    
+    attempts = int(attempts_str)
+    
+    if attempts < 1:
+        await message.answer("❌ Количество попыток должно быть больше 0")
+        return
+    
+    if attempts > 100:
+        await message.answer("❌ Количество попыток не может быть больше 100")
+        return
+    
+    await test_dao.update(test_id, attempts=attempts)
+    await message.answer("✅ Количество попыток обновлено")
+    await manager.switch_to(CreatorTestsSG.test_detail)
+
+
+@inject
+async def on_remove_attempts(_callback: CallbackQuery, _button: Button, manager: DialogManager, test_dao: FromDishka[TestDAO]):
+    test_id = manager.dialog_data.get("selected_test_id")
+    if not test_id:
+        await _callback.answer("❌ Тест не найден")
+        return
+    
+    await test_dao.update(test_id, attempts=None)
+    await _callback.answer("✅ Ограничение попыток удалено")
     await manager.switch_to(CreatorTestsSG.test_detail)
 
 
@@ -243,13 +320,22 @@ tests_dialog = Dialog(
                 id="toggle_active",
                 on_click=on_toggle_active
             ),
+            Button(Const("🔗 Поделиться"), id="share", on_click=on_share_test),
             Button(Const("🔑 Изменить пароль"), id="edit_password", on_click=on_edit_password),
+            Button(Const("🔄 Изменить попытки"), id="edit_attempts", on_click=on_edit_attempts),
             Button(Const("👥 Изменить группу"), id="edit_group", on_click=on_edit_group),
             Button(Const("📅 Изменить срок"), id="edit_expires", on_click=on_edit_expires),
             Button(Const("◀️ Назад"), id="back", on_click=on_back_to_list),
         ),
         state=CreatorTestsSG.test_detail,
         getter=get_test_detail,
+    ),
+    Window(
+        Const("<b>🔗 Поделиться тестом</b>\n\n📎 <b>Ссылка на тест:</b>"),
+        Format("\n<code>{share_link}</code>\n\n💡 Отправьте эту ссылку пользователям для прохождения теста"),
+        Button(Const("◀️ Назад"), id="back", on_click=on_back_to_list),
+        state=CreatorTestsSG.share_test,
+        getter=get_share_link,
     ),
     Window(
         Const("<b>🔑 Изменение пароля</b>\n\n💬 <b>Введите новый пароль</b> или удалите текущий:\n<i>(максимум 255 символов)</i>"),
@@ -259,6 +345,15 @@ tests_dialog = Dialog(
             Button(Const("◀️ Назад"), id="back", on_click=on_back_to_list),
         ),
         state=CreatorTestsSG.edit_password,
+    ),
+    Window(
+        Const("<b>🔄 Изменение количества попыток</b>\n\n🔢 <b>Введите новое количество попыток</b> (1-100) или удалите ограничение:"),
+        MessageInput(on_attempts_input_edit),
+        Column(
+            Button(Const("🗑 Без ограничений"), id="remove_attempts", on_click=on_remove_attempts),
+            Button(Const("◀️ Назад"), id="back", on_click=on_back_to_list),
+        ),
+        state=CreatorTestsSG.edit_attempts,
     ),
     Window(
         Const("<b>👥 Изменение группы</b>\n\n🎓 <b>Выберите группу</b> или удалите привязку:"),

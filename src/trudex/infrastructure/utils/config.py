@@ -11,6 +11,12 @@ class BotConfig:
 
 
 @dataclass
+class SecurityConfig:
+    test_hash_salt: str
+    test_hash_length: int = 16
+
+
+@dataclass
 class DatabaseConfig:
     host: str
     port: int | str
@@ -27,6 +33,7 @@ class DatabaseConfig:
 class Config:
     bot: BotConfig
     database: DatabaseConfig
+    security: SecurityConfig
     
     @classmethod
     def from_toml(cls, path: str | Path) -> Self:
@@ -35,6 +42,7 @@ class Config:
         
         bot_data: dict[str, str | int] = data["bot"]
         db_data: dict[str, str | int] = data["database"]
+        security_data: dict[str, str | int] = data["security"]
         
         return cls(
             bot=BotConfig(
@@ -47,5 +55,9 @@ class Config:
                 user=str(db_data["user"]),
                 password=str(db_data["password"]),
                 database=str(db_data["database"])
+            ),
+            security=SecurityConfig(
+                test_hash_salt=str(security_data["test_hash_salt"]),
+                test_hash_length=int(security_data.get("test_hash_length", 16))
             )
         )

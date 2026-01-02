@@ -70,26 +70,43 @@ async def on_password_input(message: Message, _widget: MessageInput, manager: Di
         return
     
     manager.dialog_data["password"] = password
-    
-    groups = await group_dao.get_all()
-    
-    if len(groups) == 0:
-        manager.dialog_data["for_group"] = None
-        await manager.switch_to(CreateTestSG.confirm_test_info)
-    else:
-        await manager.switch_to(CreateTestSG.input_expires_at)
+    await manager.switch_to(CreateTestSG.input_attempts)
 
 
 @inject
 async def on_skip_password(_callback: CallbackQuery, _button: Button, manager: DialogManager, group_dao: FromDishka[GroupDAO]):
     manager.dialog_data["password"] = None
-    groups = await group_dao.get_all()
+    await manager.switch_to(CreateTestSG.input_attempts)
+
+
+async def on_attempts_input(message: Message, _widget: MessageInput, manager: DialogManager):
+    if not message.text:
+        await message.answer("❌ Количество попыток не может быть пустым")
+        return
     
-    if len(groups) == 0:
-        manager.dialog_data["for_group"] = None
-        await manager.switch_to(CreateTestSG.confirm_test_info)
-    else:
-        await manager.switch_to(CreateTestSG.input_expires_at)
+    attempts_str = message.text.strip()
+    
+    if not attempts_str.isdigit():
+        await message.answer("❌ Количество попыток должно быть числом")
+        return
+    
+    attempts = int(attempts_str)
+    
+    if attempts < 1:
+        await message.answer("❌ Количество попыток должно быть больше 0")
+        return
+    
+    if attempts > 100:
+        await message.answer("❌ Количество попыток не может быть больше 100")
+        return
+    
+    manager.dialog_data["attempts"] = attempts
+    await manager.switch_to(CreateTestSG.input_expires_at)
+
+
+async def on_skip_attempts(_callback: CallbackQuery, _button: Button, manager: DialogManager):
+    manager.dialog_data["attempts"] = None
+    await manager.switch_to(CreateTestSG.input_expires_at)
 
 
 async def on_date_selected(_callback, _widget, manager: DialogManager, selected_date: date):
@@ -125,10 +142,12 @@ async def get_test_info(dialog_manager: DialogManager, **_kwargs):
     title = dialog_manager.dialog_data.get("title", "—")
     description = dialog_manager.dialog_data.get("description", "—")
     password = dialog_manager.dialog_data.get("password")
+    attempts = dialog_manager.dialog_data.get("attempts")
     expires_at = dialog_manager.dialog_data.get("expires_at")
     for_group = dialog_manager.dialog_data.get("for_group")
     
     password_str = f"🔒 {password}" if password else "Без пароля"
+    attempts_str = f"🔄 {attempts}" if attempts else "♾️ Без ограничений"
     expires_str = expires_at.strftime("%d.%m.%Y") if expires_at else "Без срока"
     group_str = str(for_group) if for_group else "Для всех"
     
@@ -138,6 +157,7 @@ async def get_test_info(dialog_manager: DialogManager, **_kwargs):
             f"<b>Название:</b> {title}\n"
             f"<b>Описание:</b> {description}\n"
             f"<b>Пароль:</b> {password_str}\n"
+            f"<b>Попыток:</b> {attempts_str}\n"
             f"<b>Истекает:</b> {expires_str}\n"
             f"<b>Для группы:</b> {group_str}"
         )
@@ -147,8 +167,10 @@ async def get_test_info(dialog_manager: DialogManager, **_kwargs):
 @inject
 async def on_confirm_test(_callback: CallbackQuery, _button: Button, manager: DialogManager, test_dao: FromDishka[TestDAO]):
     title = manager.dialog_data.get("title")
+    assert isinstance(title, str)
     description = manager.dialog_data.get("description")
     password = manager.dialog_data.get("password")
+    attempts = manager.dialog_data.get("attempts")
     expires_at = manager.dialog_data.get("expires_at")
     for_group = manager.dialog_data.get("for_group")
     
@@ -156,6 +178,7 @@ async def on_confirm_test(_callback: CallbackQuery, _button: Button, manager: Di
         title=title,
         description=description,
         password=password,
+        attempts=attempts,
         expires_at=expires_at,
         for_group=for_group,
     )
@@ -361,6 +384,7 @@ async def on_save_question(
     test_repo: FromDishka[TestRepository],
 ):
     test_id = manager.dialog_data.get("test_id")
+    assert isinstance(test_id, int)
     current_question = manager.dialog_data.get("current_question", {})
     current_options = manager.dialog_data.get("current_options", [])
     
@@ -442,6 +466,12 @@ create_test_dialog = Dialog(
         MessageInput(on_password_input),
         Button(Const("⏭️ Без пароля"), id="skip_password", on_click=on_skip_password),
         state=CreateTestSG.input_password,
+    ),
+    Window(
+        Const("<b>🔄 Количество попыток</b>\n\n🔢 <b>Введите количество попыток</b> (1-100) или пропустите для неограниченного количества:"),
+        MessageInput(on_attempts_input),
+        Button(Const("⏭️ Без ограничений"), id="skip_attempts", on_click=on_skip_attempts),
+        state=CreateTestSG.input_attempts,
     ),
     Window(
         Const("<b>📅 Срок действия</b>\n\n🗓 <b>Выберите дату истечения теста</b> или пропустите:"),

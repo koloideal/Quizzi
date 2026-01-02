@@ -78,9 +78,11 @@ async def main() -> None:
     router.message.middleware(RejectNotAdminMiddleware())
     router.message.middleware(RejectNotCreatorMiddleware())
     
-    container = make_async_container(DatabaseProvider())
+    container = make_async_container(DatabaseProvider(), context={Bot: bot, Config: config})
     setup_dialogs(dp)
     setup_dishka(container, dp, auto_inject=True)
+
+    bott = await container.get(Bot)
     
     async with container() as request_container:
         user_repo = await request_container.get(UserRepository)
