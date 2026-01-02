@@ -29,13 +29,19 @@ async def start_handler(message: Message, user_dao: FromDishka[UserDAO], dialog_
 
 
 @router.message(Command("admin"))
-async def admin_command(_message: Message, dialog_manager: DialogManager) -> None:
-    await dialog_manager.start(AdminMenuSG.main, mode=StartMode.RESET_STACK)
+async def admin_command(message: Message, dialog_manager: DialogManager) -> None:
+    try:
+        await dialog_manager.start(AdminMenuSG.main, mode=StartMode.RESET_STACK)
+    except Exception as e:
+        await message.answer(f"Ошибка запуска диалога: {e}")
 
 
 @router.message(Command("creator"))
-async def creator_command(_message: Message, dialog_manager: DialogManager) -> None:
-    await dialog_manager.start(CreatorMenuSG.main, mode=StartMode.RESET_STACK)
+async def creator_command(message: Message, dialog_manager: DialogManager) -> None:
+    try:
+        await dialog_manager.start(CreatorMenuSG.main, mode=StartMode.RESET_STACK)
+    except Exception as e:
+        await message.answer(f"Ошибка запуска диалога: {e}")
 
 
 @router.error()

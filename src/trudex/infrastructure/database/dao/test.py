@@ -27,12 +27,16 @@ class TestDAO:
         title: str,
         description: str | None = None,
         for_group: int | None = None,
+        password: str | None = None,
+        expires_at: str | None = None,
         is_active: bool = True,
     ) -> DomainTest:
         test = Test(
             title=title,
             description=description,
             for_group=for_group,
+            password=password,
+            expires_at=expires_at,
             is_active=is_active,
         )
         self.session.add(test)
@@ -46,6 +50,8 @@ class TestDAO:
         title: str | None = None,
         description: str | None = None,
         for_group: int | None = None,
+        password: str | None = None,
+        expires_at: str | None = None,
         is_active: bool | None = None,
     ) -> DomainTest | None:
         result = await self.session.execute(
@@ -61,6 +67,10 @@ class TestDAO:
             test.description = description
         if for_group is not None:
             test.for_group = for_group
+        if password is not None:
+            test.password = password
+        if expires_at is not None:
+            test.expires_at = expires_at
         if is_active is not None:
             test.is_active = is_active
         

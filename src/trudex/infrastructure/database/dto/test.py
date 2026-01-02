@@ -12,6 +12,8 @@ class TestDTO:
             title=self.model.title,
             description=self.model.description,
             for_group=self.model.for_group,
+            password=self.model.password,
+            expires_at=self.model.expires_at,
             is_active=self.model.is_active,
             created_at=self.model.created_at,
             updated_at=self.model.updated_at,

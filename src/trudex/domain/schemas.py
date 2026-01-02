@@ -20,6 +20,8 @@ class Test:
     title: str
     description: str | None = None
     for_group: int | None = None
+    password: str | None = None
+    expires_at: datetime | None = None
     is_active: bool = True
     created_at: datetime | None = None
     updated_at: datetime | None = None
