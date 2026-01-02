@@ -1,11 +1,15 @@
+import asyncio
+import functools
 from datetime import date, datetime
+import logging
 
 from aiogram import Bot
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import BufferedInputFile, CallbackQuery, Message
 from aiogram_dialog import Dialog, DialogManager, StartMode, Window
 from aiogram_dialog.widgets.input import MessageInput
 from aiogram_dialog.widgets.kbd import (Button, Calendar, Column, Row,
                                         ScrollingGroup, Select)
+from aiogram_dialog.widgets.media import DynamicMedia
 from aiogram_dialog.widgets.text import Const, Format
 from dishka import FromDishka
 from dishka.integrations.aiogram_dialog import inject
@@ -17,6 +21,7 @@ from trudex.infrastructure.database.dao.group import GroupDAO
 from trudex.infrastructure.database.dao.test import TestDAO
 from trudex.infrastructure.database.repo.test import TestRepository
 from trudex.infrastructure.utils.config import Config
+from trudex.infrastructure.utils.qr_generator import generate_qr_bytes
 from trudex.infrastructure.utils.test_id_to_hash import generate_alpha_id
 
 
@@ -110,25 +115,48 @@ async def on_back_to_list(_callback: CallbackQuery, _button: Button, manager: Di
 async def on_share_test(_callback: CallbackQuery, _button: Button, manager: DialogManager):
     await manager.switch_to(CreatorTestsSG.share_test)
 
+def debug_getter(func):
+    @functools.wraps(func)
+    async def wrapper(*args, **kwargs):
+        try:
+            return await func(*args, **kwargs)
+        except Exception as e:
+            logging.exception(f"CRASH in getter {func.__name__}: {e}")
+            raise e  # Пробрасываем ошибку дальше, чтобы диалог всё равно упал
+    return wrapper
 
+@debug_getter
 @inject
-async def get_share_link(dialog_manager: DialogManager, config: FromDishka[Config], **_kwargs):
+async def get_share_data(dialog_manager: DialogManager, config: FromDishka[Config], bot_inst: FromDishka[Bot], **_kwargs):
     test_id = dialog_manager.dialog_data.get("selected_test_id")
+    
     if not test_id:
-        return {"share_link": "Ошибка: тест не найден"}
+        return {
+            "share_link": "Ошибка: тест не найден"
+        }
     
     test_hash = generate_alpha_id(
         test_id, 
         config.security.test_hash_salt,
         config.security.test_hash_length
     )
-    bot = Bot(config.bot.token)
-    bot_info = await bot.get_me()
-    await bot.session.close()
+    
+    bot_info = await bot_inst.get_me()
     bot_username = bot_info.username or "your_bot"
     share_link = f"https://t.me/{bot_username}?start={test_hash}"
     
-    return {"share_link": share_link}
+    loop = asyncio.get_running_loop()
+    qr_bytes = await loop.run_in_executor(
+        None,
+        functools.partial(generate_qr_bytes, share_link)
+    )
+    
+    dialog_manager.dialog_data["qr_bytes"] = qr_bytes
+    
+    return {
+        "share_link": share_link,
+        "qr_media": BufferedInputFile(qr_bytes, filename="qr.png")
+    }
 
 
 async def on_edit_password(_callback: CallbackQuery, _button: Button, manager: DialogManager):
@@ -331,14 +359,7 @@ tests_dialog = Dialog(
         getter=get_test_detail,
     ),
     Window(
-        Const("<b>🔗 Поделиться тестом</b>\n\n📎 <b>Ссылка на тест:</b>"),
-        Format("\n<code>{share_link}</code>\n\n💡 Отправьте эту ссылку пользователям для прохождения теста"),
-        Button(Const("◀️ Назад"), id="back", on_click=on_back_to_list),
-        state=CreatorTestsSG.share_test,
-        getter=get_share_link,
-    ),
-    Window(
-        Const("<b>🔑 Изменение пароля</b>\n\n💬 <b>Введите новый пароль</b> или удалите текущий:\n<i>(максимум 255 символов)</i>"),
+        Const("<b>� Измеенение пароля</b>\n\n� <b>СВведите новый пароль</b> или удалите текущий:\n<i>(максимум 255 символов)</i>"),
         MessageInput(on_password_input),
         Column(
             Button(Const("🗑 Удалить пароль"), id="remove_password", on_click=on_remove_password),
@@ -385,4 +406,12 @@ tests_dialog = Dialog(
         ),
         state=CreatorTestsSG.edit_expires,
     ),
+    Window(
+        DynamicMedia("qr_media"),
+        Format("<b>🔗 Поделиться тестом</b>\n\n📎 <b>Ссылка на тест:</b>\n<code>{share_link}</code>\n\n💡 Отправьте эту ссылку или QR-код пользователям для прохождения теста"),
+        Button(Const("◀️ Назад"), id="back", on_click=on_back_to_list),
+        state=CreatorTestsSG.share_test,
+        getter=get_share_data,
+    ),
 )
+
