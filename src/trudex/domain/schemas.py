@@ -15,6 +15,14 @@ class User:
 
 
 @dataclass
+class Group:
+    id: int
+    number: int
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+
+@dataclass
 class Test:
     id: int
     title: str

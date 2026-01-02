@@ -3,7 +3,7 @@ from aiogram_dialog import Dialog, DialogManager, Window, StartMode
 from aiogram_dialog.widgets.kbd import Button, Column
 from aiogram_dialog.widgets.text import Const
 
-from trudex.application.bot.admin_dialogs.states import AdminMenuSG, AdminUsersSG, AdminTestsSG, AdminBroadcastSG
+from trudex.application.bot.admin_dialogs.states import AdminMenuSG, AdminUsersSG, AdminTestsSG, AdminBroadcastSG, AdminGroupsSG
 
 
 async def on_tests_clicked(_callback: CallbackQuery, _button: Button, manager: DialogManager) -> None:
@@ -12,6 +12,10 @@ async def on_tests_clicked(_callback: CallbackQuery, _button: Button, manager: D
 
 async def on_users_clicked(_callback: CallbackQuery, _button: Button, manager: DialogManager) -> None:
     await manager.start(AdminUsersSG.users_list, mode=StartMode.RESET_STACK)
+
+
+async def on_groups_clicked(_callback: CallbackQuery, _button: Button, manager: DialogManager) -> None:
+    await manager.start(AdminGroupsSG.groups_list, mode=StartMode.RESET_STACK)
 
 
 async def on_broadcast_clicked(_callback: CallbackQuery, _button: Button, manager: DialogManager) -> None:
@@ -24,6 +28,7 @@ admin_menu_dialog = Dialog(
         Column(
             Button(Const("📝 Тесты"), id="tests", on_click=on_tests_clicked),
             Button(Const("👥 Пользователи"), id="users", on_click=on_users_clicked),
+            Button(Const("🎓 Группы"), id="groups", on_click=on_groups_clicked),
             Button(Const("📢 Рассылка"), id="broadcast", on_click=on_broadcast_clicked),
         ),
         state=AdminMenuSG.main,

@@ -3,12 +3,13 @@ from datetime import date, datetime
 from aiogram.types import CallbackQuery, ContentType, Message
 from aiogram_dialog import Dialog, DialogManager, Window, StartMode
 from aiogram_dialog.widgets.input import MessageInput
-from aiogram_dialog.widgets.kbd import Button, Calendar, Cancel, Column, Row, Select
+from aiogram_dialog.widgets.kbd import Button, Calendar, Cancel, Column, Row, ScrollingGroup, Select
 from aiogram_dialog.widgets.text import Const, Format
 from dishka.integrations.aiogram import CONTAINER_NAME
 from dishka.integrations.aiogram_dialog import inject
 
 from trudex.application.bot.creator_dialogs.states import CreateTestSG, CreatorTestsSG
+from trudex.infrastructure.database.dao.group import GroupDAO
 from trudex.infrastructure.database.dao.option import OptionDAO
 from trudex.infrastructure.database.dao.question import QuestionDAO
 from trudex.infrastructure.database.dao.test import TestDAO
@@ -66,12 +67,29 @@ async def on_password_input(message: Message, _widget: MessageInput, manager: Di
         return
     
     manager.dialog_data["password"] = password
-    await manager.switch_to(CreateTestSG.input_expires_at)
+    
+    container = manager.middleware_data[CONTAINER_NAME]
+    group_dao = await container.get(GroupDAO)
+    groups = await group_dao.get_all()
+    
+    if len(groups) == 0:
+        manager.dialog_data["for_group"] = None
+        await manager.switch_to(CreateTestSG.confirm_test_info)
+    else:
+        await manager.switch_to(CreateTestSG.input_expires_at)
 
 
 async def on_skip_password(_callback: CallbackQuery, _button: Button, manager: DialogManager):
     manager.dialog_data["password"] = None
-    await manager.switch_to(CreateTestSG.input_expires_at)
+    container = manager.middleware_data[CONTAINER_NAME]
+    group_dao = await container.get(GroupDAO)
+    groups = await group_dao.get_all()
+    
+    if len(groups) == 0:
+        manager.dialog_data["for_group"] = None
+        await manager.switch_to(CreateTestSG.confirm_test_info)
+    else:
+        await manager.switch_to(CreateTestSG.input_expires_at)
 
 
 async def on_date_selected(_callback, _widget, manager: DialogManager, selected_date: date):
@@ -84,13 +102,19 @@ async def on_skip_expires(_callback: CallbackQuery, _button: Button, manager: Di
     await manager.switch_to(CreateTestSG.input_for_group)
 
 
-async def on_group_input(message: Message, _widget: MessageInput, manager: DialogManager):
-    text = (message.text or "").strip()
-    if text.isdigit() and len(text) == 4:
-        manager.dialog_data["for_group"] = int(text)
-        await manager.switch_to(CreateTestSG.confirm_test_info)
-    else:
-        await message.answer("❌ Группа должна быть 4-значным числом")
+async def get_groups_for_test(dialog_manager: DialogManager, **_kwargs):
+    container = dialog_manager.middleware_data[CONTAINER_NAME]
+    group_dao = await container.get(GroupDAO)
+    groups = await group_dao.get_all()
+    
+    return {
+        "groups": [(str(g.number), str(g.number)) for g in groups],
+    }
+
+
+async def on_group_selected(_callback: CallbackQuery, _widget, manager: DialogManager, item_id: str):
+    manager.dialog_data["for_group"] = int(item_id)
+    await manager.switch_to(CreateTestSG.confirm_test_info)
 
 
 async def on_skip_group(_callback: CallbackQuery, _button: Button, manager: DialogManager):
@@ -183,7 +207,7 @@ async def get_question_type_data(**_kwargs):
     return {
         "question_types": [
             ("single", "📌 Один правильный ответ"),
-            ("multiple", "� Ннесколько правильных ответов"),
+            ("multiple", "� Несколько правильных ответов"),
             ("input", "✏️ Ввод текста"),
         ]
     }
@@ -423,10 +447,22 @@ create_test_dialog = Dialog(
         state=CreateTestSG.input_expires_at,
     ),
     Window(
-        Const("<b>👥 Группа</b>\n\n🎓 <b>Введите номер группы</b> (4 цифры) или пропустите для всех:"),
-        MessageInput(on_group_input),
+        Const("<b>👥 Группа</b>\n\n🎓 <b>Выберите группу</b> или пропустите для всех:"),
+        ScrollingGroup(
+            Select(
+                Format("{item[1]}"),
+                id="groups",
+                item_id_getter=lambda x: x[0],
+                items="groups",
+                on_click=on_group_selected,
+            ),
+            id="groups_scroll",
+            width=2,
+            height=7,
+        ),
         Button(Const("⏭️ Для всех"), id="skip_group", on_click=on_skip_group),
         state=CreateTestSG.input_for_group,
+        getter=get_groups_for_test,
     ),
     Window(
         Format("{info}\n\n<b>✅ Подтвердите создание теста:</b>"),
@@ -454,13 +490,13 @@ create_test_dialog = Dialog(
     ),
     Window(
         Const("<b>📋 Тип вопроса</b>\n\n🎯 <b>Выберите тип вопроса:</b>"),
-        Select(
+        Column(Select(
             Format("{item[1]}"),
             id="question_type",
             item_id_getter=lambda x: x[0],
             items="question_types",
             on_click=on_question_type_selected,
-        ),
+        )),
         Button(Const("◀️ Назад"), id="back", on_click=on_cancel_question),
         state=CreateTestSG.select_question_type,
         getter=get_question_type_data,
@@ -481,13 +517,13 @@ create_test_dialog = Dialog(
     ),
     Window(
         Const("<b>✅ Правильные ответы</b>\n\n<b>Отметьте правильные варианты ответов:</b>"),
-        Select(
+        Column(Select(
             Format("{item[1]}"),
             id="options",
             item_id_getter=lambda x: x[0],
             items="options",
             on_click=on_option_toggle,
-        ),
+        )),
         Button(Const("✅ Подтвердить выбор"), id="confirm", on_click=on_confirm_correct),
         Button(Const("◀️ Назад"), id="back", on_click=on_cancel_question),
         state=CreateTestSG.mark_correct_options,

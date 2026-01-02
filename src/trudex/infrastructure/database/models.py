@@ -24,6 +24,23 @@ class User(Base):
     updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now())
 
 
+@final
+class Group(Base):
+    __tablename__ = "groups"
+    
+    id: Mapped[int] = mapped_column(primary_key=True)
+    number: Mapped[int] = mapped_column(Integer, unique=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now())
+    
+    __table_args__ = (
+        CheckConstraint("number >= 1000 AND number <= 9999", name="check_group_number"),
+    )
+    __table_args__ = (
+        CheckConstraint("number >= 1000 AND number <= 9999", name="check_group_number"),
+    )
+
+
 class QuestionType(str, Enum):
     SINGLE = "single"
     MULTIPLE = "multiple"

@@ -18,3 +18,10 @@ class AdminTestsSG(StatesGroup):
 class AdminBroadcastSG(StatesGroup):
     broadcast_input = State()
     broadcast_confirm = State()
+
+
+class AdminGroupsSG(StatesGroup):
+    groups_list = State()
+    add_group_input_number = State()
+    delete_groups_list = State()
+    delete_confirm = State()

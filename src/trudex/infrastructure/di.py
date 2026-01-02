@@ -4,6 +4,7 @@ from dishka import Provider, Scope, provide
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from trudex.infrastructure.database.config import new_session_maker
+from trudex.infrastructure.database.dao.group import GroupDAO
 from trudex.infrastructure.database.dao.option import OptionDAO
 from trudex.infrastructure.database.dao.question import QuestionDAO
 from trudex.infrastructure.database.dao.test import TestDAO
@@ -36,6 +37,10 @@ class DatabaseProvider(Provider):
     @provide(scope=Scope.REQUEST)
     def get_user_dao(self, session: AsyncSession) -> UserDAO:
         return UserDAO(session)
+    
+    @provide(scope=Scope.REQUEST)
+    def get_group_dao(self, session: AsyncSession) -> GroupDAO:
+        return GroupDAO(session)
     
     @provide(scope=Scope.REQUEST)
     def get_test_dao(self, session: AsyncSession) -> TestDAO:

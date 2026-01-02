@@ -21,6 +21,13 @@ class CreatorBroadcastSG(StatesGroup):
     broadcast_confirm = State()
 
 
+class CreatorGroupsSG(StatesGroup):
+    groups_list = State()
+    add_group_input_number = State()
+    delete_groups_list = State()
+    delete_confirm = State()
+
+
 class CreateTestSG(StatesGroup):
     input_title = State()
     input_description = State()
