@@ -31,6 +31,7 @@ class Test:
     for_group: int | None = None
     password: str | None = None
     expires_at: datetime | None = None
+    attempts: int | None = None
     is_active: bool = True
     created_at: datetime | None = None
     updated_at: datetime | None = None

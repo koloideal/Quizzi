@@ -14,6 +14,7 @@ class TestDTO:
             for_group=self.model.for_group,
             password=self.model.password,
             expires_at=self.model.expires_at,
+            attempts=self.model.attempts,
             is_active=self.model.is_active,
             created_at=self.model.created_at,
             updated_at=self.model.updated_at,
