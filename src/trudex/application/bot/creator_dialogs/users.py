@@ -18,7 +18,7 @@ async def get_users_data(user_dao: FromDishka[UserDAO], **_kwargs):
     
     return {
         "users": [
-            (f"{u.first_name} (@{u.username or 'нет'})", u.id)
+            (f"{u.name or u.first_name} (@{u.username or 'нет'})", u.id)
             for u in users
         ],
         "count": len(users),
@@ -36,15 +36,15 @@ async def get_user_detail_data(dialog_manager: DialogManager, user_dao: FromDish
         return {"user_info": "Пользователь не найден", "is_admin": True, "show_make_admin": False}
     
     username_str = f"@{user.username}" if user.username else "—"
-    last_name_str = user.last_name or "—"
+    name_str = user.name or "—"
     group_str = str(user.group) if user.group else "—"
     admin_status = "✅ Да" if user.is_admin else "❌ Нет"
     
     user_info = (
         f"<b>👤 Информация о пользователе</b>\n\n"
         f"<b>ID:</b> <code>{user.id}</code>\n"
-        f"<b>Имя:</b> {user.first_name}\n"
-        f"<b>Фамилия:</b> {last_name_str}\n"
+        f"<b>Ник:</b> {user.first_name}\n"
+        f"<b>Имя и фамилия:</b> {name_str}\n"
         f"<b>Username:</b> {username_str}\n"
         f"<b>Группа:</b> {group_str}\n"
         f"<b>Администратор:</b> {admin_status}"
@@ -68,8 +68,9 @@ async def get_confirm_data(dialog_manager: DialogManager, user_dao: FromDishka[U
         return {"user_info": "Пользователь не найден"}
     
     username_str = f"@{user.username}" if user.username else "—"
+    name_str = user.name or f"{user.first_name} {user.last_name or ''}".strip()
     return {
-        "user_info": f"<b>{user.first_name}</b>\n{username_str}\nID: <code>{user.id}</code>"
+        "user_info": f"<b>{name_str}</b>\n{username_str}\nID: <code>{user.id}</code>"
     }
 
 

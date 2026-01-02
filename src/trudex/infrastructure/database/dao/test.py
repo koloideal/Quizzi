@@ -18,7 +18,9 @@ class TestDAO:
         return TestDTO(model).to_domain() if model else None
     
     async def get_all(self) -> list[DomainTest]:
-        result = await self.session.execute(select(Test))
+        result = await self.session.execute(
+            select(Test).order_by(Test.id)
+        )
         models = list(result.scalars().all())
         return [TestDTO(model).to_domain() for model in models]
     

@@ -12,6 +12,7 @@ class UserDTO:
             username=self.model.username,
             first_name=self.model.first_name,
             last_name=self.model.last_name,
+            name=self.model.name,
             group=self.model.group,
             is_admin=self.model.is_admin,
             created_at=self.model.created_at,

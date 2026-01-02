@@ -6,4 +6,5 @@ class UserMenuSG(StatesGroup):
 
 
 class UserRegistrationSG(StatesGroup):
+    input_name = State()
     select_group = State()

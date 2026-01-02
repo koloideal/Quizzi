@@ -19,6 +19,7 @@ class User(Base):
     username: Mapped[str | None] = mapped_column(String(32))
     first_name: Mapped[str] = mapped_column(String(64))
     last_name: Mapped[str | None] = mapped_column(String(64))
+    name: Mapped[str | None] = mapped_column(String(128))
     group: Mapped[int | None] = mapped_column(CheckConstraint("group >= 1000 AND group <= 9999"))
     is_admin: Mapped[bool] = mapped_column(default=False)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())

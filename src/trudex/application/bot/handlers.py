@@ -32,7 +32,7 @@ async def start_handler(
         groups = await group_dao.get_all()
         
         if len(groups) > 0:
-            # Есть группы - создаем пользователя без группы и показываем выбор
+            # Есть группы - создаем пользователя без группы и имени, показываем регистрацию
             await user_dao.create(
                 user_id=message.from_user.id,
                 first_name=message.from_user.first_name,
@@ -40,7 +40,7 @@ async def start_handler(
                 last_name=message.from_user.last_name,
             )
             await dialog_manager.start(
-                UserRegistrationSG.select_group,
+                UserRegistrationSG.input_name,
                 mode=StartMode.RESET_STACK,
                 data={"user_id": message.from_user.id}
             )
@@ -55,18 +55,27 @@ async def start_handler(
             await dialog_manager.start(UserMenuSG.main, mode=StartMode.RESET_STACK)
     else:
         # Существующий пользователь
-        # Проверяем, выбрал ли он группу
+        # Проверяем, заполнил ли он имя и группу
         groups = await group_dao.get_all()
         
-        if len(groups) > 0 and existing_user.group is None:
-            # Есть группы, но пользователь не выбрал группу - показываем выбор
-            await dialog_manager.start(
-                UserRegistrationSG.select_group,
-                mode=StartMode.RESET_STACK,
-                data={"user_id": message.from_user.id}
-            )
+        if len(groups) > 0 and (existing_user.name is None or existing_user.group is None):
+            # Есть группы, но пользователь не завершил регистрацию
+            if existing_user.name is None:
+                # Начинаем с ввода имени
+                await dialog_manager.start(
+                    UserRegistrationSG.input_name,
+                    mode=StartMode.RESET_STACK,
+                    data={"user_id": message.from_user.id}
+                )
+            else:
+                # Имя есть, но нет группы
+                await dialog_manager.start(
+                    UserRegistrationSG.select_group,
+                    mode=StartMode.RESET_STACK,
+                    data={"user_id": message.from_user.id}
+                )
         else:
-            # Группа выбрана или групп нет - обновляем данные и открываем меню
+            # Регистрация завершена или групп нет - обновляем данные и открываем меню
             await user_dao.upsert(
                 user_id=message.from_user.id,
                 first_name=message.from_user.first_name,

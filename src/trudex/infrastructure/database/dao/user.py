@@ -28,6 +28,7 @@ class UserDAO:
         first_name: str,
         username: str | None = None,
         last_name: str | None = None,
+        name: str | None = None,
         group: int | None = None,
         is_admin: bool = False,
     ) -> DomainUser:
@@ -36,6 +37,7 @@ class UserDAO:
             username=username,
             first_name=first_name,
             last_name=last_name,
+            name=name,
             group=group,
             is_admin=is_admin,
         )
@@ -50,6 +52,7 @@ class UserDAO:
         username: str | None = None,
         first_name: str | None = None,
         last_name: str | None = None,
+        name: str | None = None,
         group: int | None = None,
         is_admin: bool | None = None,
     ) -> DomainUser | None:
@@ -66,6 +69,8 @@ class UserDAO:
             user.first_name = first_name
         if last_name is not None:
             user.last_name = last_name
+        if name is not None:
+            user.name = name
         if group is not None:
             user.group = group
         if is_admin is not None:
@@ -93,6 +98,7 @@ class UserDAO:
         first_name: str,
         username: str | None = None,
         last_name: str | None = None,
+        name: str | None = None,
         group: int | None = None,
         is_admin: bool = False,
     ) -> DomainUser:
@@ -108,6 +114,8 @@ class UserDAO:
                 user.first_name = first_name
             if last_name is not None:
                 user.last_name = last_name
+            if name is not None:
+                user.name = name
             if group is not None:
                 user.group = group
             if is_admin is not None:
@@ -121,6 +129,7 @@ class UserDAO:
             username=username,
             first_name=first_name,
             last_name=last_name,
+            name=name,
             group=group,
             is_admin=is_admin,
         )
