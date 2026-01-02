@@ -13,6 +13,7 @@ from trudex.application.bot.admin_dialogs.main_menu import admin_menu_dialog
 from trudex.application.bot.admin_dialogs.tests import tests_dialog as admin_tests_dialog
 from trudex.application.bot.admin_dialogs.users import users_dialog as admin_users_dialog
 from trudex.application.bot.creator_dialogs.broadcast import broadcast_dialog as creator_broadcast_dialog
+from trudex.application.bot.creator_dialogs.create_test import create_test_dialog
 from trudex.application.bot.creator_dialogs.main_menu import creator_menu_dialog
 from trudex.application.bot.creator_dialogs.tests import tests_dialog as creator_tests_dialog
 from trudex.application.bot.creator_dialogs.users import users_dialog as creator_users_dialog
@@ -52,6 +53,7 @@ async def main() -> None:
         creator_users_dialog,
         creator_tests_dialog,
         creator_broadcast_dialog,
+        create_test_dialog,
     )
     
     router.message.middleware(RejectNotAdminMiddleware())

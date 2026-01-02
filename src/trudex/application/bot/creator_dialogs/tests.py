@@ -5,7 +5,7 @@ from aiogram_dialog.widgets.text import Const, Format
 from dishka import FromDishka
 from dishka.integrations.aiogram_dialog import inject
 
-from trudex.application.bot.creator_dialogs.states import CreatorTestsSG, CreatorMenuSG
+from trudex.application.bot.creator_dialogs.states import CreatorTestsSG, CreatorMenuSG, CreateTestSG
 from trudex.infrastructure.database.dao.test import TestDAO
 
 
@@ -27,8 +27,8 @@ async def on_test_selected(_callback: CallbackQuery, _widget: Select, manager: D
     await _callback.answer("Тест выбран")
 
 
-async def on_add_test_clicked(_callback: CallbackQuery, _button: Button, _manager: DialogManager):
-    await _callback.answer("Добавление теста")
+async def on_add_test_clicked(_callback: CallbackQuery, _button: Button, manager: DialogManager):
+    await manager.start(CreateTestSG.input_title, mode=StartMode.RESET_STACK)
 
 
 async def on_back_clicked(_callback: CallbackQuery, _button: Button, manager: DialogManager):

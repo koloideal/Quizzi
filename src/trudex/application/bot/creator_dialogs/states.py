@@ -19,3 +19,20 @@ class CreatorTestsSG(StatesGroup):
 class CreatorBroadcastSG(StatesGroup):
     broadcast_input = State()
     broadcast_confirm = State()
+
+
+class CreateTestSG(StatesGroup):
+    input_title = State()
+    input_description = State()
+    input_password = State()
+    input_expires_at = State()
+    input_for_group = State()
+    confirm_test_info = State()
+    add_question = State()
+    input_question_text = State()
+    select_question_type = State()
+    input_correct_answer = State()
+    input_options = State()
+    mark_correct_options = State()
+    confirm_question = State()
+    test_created = State()
