@@ -176,11 +176,14 @@ async def on_question_input(message: Message, _widget: MessageInput, manager: Di
     if message.content_type == ContentType.PHOTO:
         photo = message.photo[-1] if message.photo else None
         if photo:
-            current_question["tg_file_id"] = photo.file_id
             text = (message.caption or "").strip()
+            if not text:
+                await message.answer("❌ Изображение должно содержать подпись с текстом вопроса")
+                return
             if len(text) > 2000:
                 await message.answer("❌ Текст вопроса слишком длинный (максимум 2000 символов)")
                 return
+            current_question["tg_file_id"] = photo.file_id
             current_question["text"] = text
     elif message.content_type == ContentType.TEXT and message.text:
         text = message.text.strip()

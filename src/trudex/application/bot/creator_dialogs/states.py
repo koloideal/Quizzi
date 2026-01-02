@@ -15,6 +15,9 @@ class CreatorUsersSG(StatesGroup):
 class CreatorTestsSG(StatesGroup):
     tests_list = State()
     test_detail = State()
+    edit_password = State()
+    edit_group = State()
+    edit_expires = State()
 
 
 class CreatorBroadcastSG(StatesGroup):

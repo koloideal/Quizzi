@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -30,7 +32,7 @@ class TestDAO:
         description: str | None = None,
         for_group: int | None = None,
         password: str | None = None,
-        expires_at: str | None = None,
+        expires_at: datetime | None = None,
         is_active: bool = True,
     ) -> DomainTest:
         test = Test(
@@ -53,7 +55,7 @@ class TestDAO:
         description: str | None = None,
         for_group: int | None = None,
         password: str | None = None,
-        expires_at: str | None = None,
+        expires_at: datetime | None = None,
         is_active: bool | None = None,
     ) -> DomainTest | None:
         result = await self.session.execute(

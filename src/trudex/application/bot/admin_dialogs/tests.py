@@ -1,13 +1,17 @@
-from aiogram.types import CallbackQuery
+from datetime import date, datetime
+
+from aiogram.types import CallbackQuery, Message
 from aiogram_dialog import Dialog, DialogManager, StartMode, Window
-from aiogram_dialog.widgets.kbd import (Button, Column, Row, ScrollingGroup,
-                                        Select)
+from aiogram_dialog.widgets.input import MessageInput
+from aiogram_dialog.widgets.kbd import (Button, Calendar, Column, Row,
+                                        ScrollingGroup, Select)
 from aiogram_dialog.widgets.text import Const, Format
 from dishka import FromDishka
 from dishka.integrations.aiogram_dialog import inject
 
 from trudex.application.bot.admin_dialogs.states import (AdminMenuSG,
                                                          AdminTestsSG)
+from trudex.infrastructure.database.dao.group import GroupDAO
 from trudex.infrastructure.database.dao.test import TestDAO
 from trudex.infrastructure.database.repo.test import TestRepository
 
@@ -97,6 +101,109 @@ async def on_back_to_list(_callback: CallbackQuery, _button: Button, manager: Di
     await manager.switch_to(AdminTestsSG.tests_list)
 
 
+async def on_edit_password(_callback: CallbackQuery, _button: Button, manager: DialogManager):
+    await manager.switch_to(AdminTestsSG.edit_password)
+
+
+async def on_edit_group(_callback: CallbackQuery, _button: Button, manager: DialogManager):
+    await manager.switch_to(AdminTestsSG.edit_group)
+
+
+async def on_edit_expires(_callback: CallbackQuery, _button: Button, manager: DialogManager):
+    await manager.switch_to(AdminTestsSG.edit_expires)
+
+
+@inject
+async def on_password_input(message: Message, _widget: MessageInput, manager: DialogManager, test_dao: FromDishka[TestDAO]):
+    test_id = manager.dialog_data.get("selected_test_id")
+    if not test_id:
+        await message.answer("❌ Тест не найден")
+        return
+    
+    if not message.text:
+        await message.answer("❌ Пароль не может быть пустым")
+        return
+    
+    password = message.text.strip()
+    if len(password) > 255:
+        await message.answer("❌ Пароль слишком длинный (максимум 255 символов)")
+        return
+    
+    await test_dao.update(test_id, password=password)
+    await message.answer("✅ Пароль обновлен")
+    await manager.switch_to(AdminTestsSG.test_detail)
+
+
+@inject
+async def on_remove_password(_callback: CallbackQuery, _button: Button, manager: DialogManager, test_dao: FromDishka[TestDAO]):
+    test_id = manager.dialog_data.get("selected_test_id")
+    if not test_id:
+        await _callback.answer("❌ Тест не найден")
+        return
+    
+    await test_dao.update(test_id, password=None)
+    await _callback.answer("✅ Пароль удален")
+    await manager.switch_to(AdminTestsSG.test_detail)
+
+
+@inject
+async def get_groups_for_edit(dialog_manager: DialogManager, group_dao: FromDishka[GroupDAO], **_kwargs):
+    groups = await group_dao.get_all()
+    
+    return {
+        "groups": [(str(g.number), str(g.number)) for g in groups],
+    }
+
+
+@inject
+async def on_group_selected_for_test(_callback: CallbackQuery, _widget, manager: DialogManager, item_id: str, test_dao: FromDishka[TestDAO]):
+    test_id = manager.dialog_data.get("selected_test_id")
+    if not test_id:
+        await _callback.answer("❌ Тест не найден")
+        return
+    
+    await test_dao.update(test_id, for_group=int(item_id))
+    await _callback.answer("✅ Группа обновлена")
+    await manager.switch_to(AdminTestsSG.test_detail)
+
+
+@inject
+async def on_remove_group(_callback: CallbackQuery, _button: Button, manager: DialogManager, test_dao: FromDishka[TestDAO]):
+    test_id = manager.dialog_data.get("selected_test_id")
+    if not test_id:
+        await _callback.answer("❌ Тест не найден")
+        return
+    
+    await test_dao.update(test_id, for_group=None)
+    await _callback.answer("✅ Тест теперь доступен для всех групп")
+    await manager.switch_to(AdminTestsSG.test_detail)
+
+
+@inject
+async def on_date_selected_for_test(_callback, _widget, manager: DialogManager, selected_date: date, test_dao: FromDishka[TestDAO]):
+    test_id = manager.dialog_data.get("selected_test_id")
+    if not test_id:
+        await _callback.answer("❌ Тест не найден")
+        return
+    
+    expires_at = datetime.combine(selected_date, datetime.min.time())
+    await test_dao.update(test_id, expires_at=expires_at)
+    await _callback.answer("✅ Срок действия обновлен")
+    await manager.switch_to(AdminTestsSG.test_detail)
+
+
+@inject
+async def on_remove_expires(_callback: CallbackQuery, _button: Button, manager: DialogManager, test_dao: FromDishka[TestDAO]):
+    test_id = manager.dialog_data.get("selected_test_id")
+    if not test_id:
+        await _callback.answer("❌ Тест не найден")
+        return
+    
+    await test_dao.update(test_id, expires_at=None)
+    await _callback.answer("✅ Срок действия удален")
+    await manager.switch_to(AdminTestsSG.test_detail)
+
+
 async def on_add_test_clicked(_callback: CallbackQuery, _button: Button, _manager: DialogManager):
     await _callback.answer("Добавление теста")
 
@@ -129,15 +236,57 @@ tests_dialog = Dialog(
     ),
     Window(
         Format("{test_info}"),
-        Row(
+        Column(
             Button(
                 Format("{button_text}"),
                 id="toggle_active",
                 on_click=on_toggle_active
             ),
+            Button(Const("🔑 Изменить пароль"), id="edit_password", on_click=on_edit_password),
+            Button(Const("👥 Изменить группу"), id="edit_group", on_click=on_edit_group),
+            Button(Const("📅 Изменить срок"), id="edit_expires", on_click=on_edit_expires),
             Button(Const("◀️ Назад"), id="back", on_click=on_back_to_list),
         ),
         state=AdminTestsSG.test_detail,
         getter=get_test_detail,
+    ),
+    Window(
+        Const("<b>🔑 Изменение пароля</b>\n\n💬 <b>Введите новый пароль</b> или удалите текущий:\n<i>(максимум 255 символов)</i>"),
+        MessageInput(on_password_input),
+        Column(
+            Button(Const("🗑 Удалить пароль"), id="remove_password", on_click=on_remove_password),
+            Button(Const("◀️ Назад"), id="back", on_click=on_back_to_list),
+        ),
+        state=AdminTestsSG.edit_password,
+    ),
+    Window(
+        Const("<b>👥 Изменение группы</b>\n\n🎓 <b>Выберите группу</b> или удалите привязку:"),
+        ScrollingGroup(
+            Select(
+                Format("{item[1]}"),
+                id="groups",
+                item_id_getter=lambda x: x[0],
+                items="groups",
+                on_click=on_group_selected_for_test,
+            ),
+            id="groups_scroll",
+            width=2,
+            height=7,
+        ),
+        Column(
+            Button(Const("🗑 Для всех групп"), id="remove_group", on_click=on_remove_group),
+            Button(Const("◀️ Назад"), id="back", on_click=on_back_to_list),
+        ),
+        state=AdminTestsSG.edit_group,
+        getter=get_groups_for_edit,
+    ),
+    Window(
+        Const("<b>📅 Изменение срока действия</b>\n\n🗓 <b>Выберите новую дату</b> или удалите срок:"),
+        Calendar(id="calendar", on_click=on_date_selected_for_test),
+        Column(
+            Button(Const("🗑 Удалить срок"), id="remove_expires", on_click=on_remove_expires),
+            Button(Const("◀️ Назад"), id="back", on_click=on_back_to_list),
+        ),
+        state=AdminTestsSG.edit_expires,
     ),
 )
