@@ -10,10 +10,9 @@ from trudex.infrastructure.database.dao.test_attempt import TestAttemptDAO
 from trudex.infrastructure.database.dao.user_answer import UserAnswerDAO
 from trudex.infrastructure.database.dto.test_attempt import TestAttemptDTO
 from trudex.infrastructure.database.dto.user_answer import UserAnswerDTO
-from trudex.infrastructure.database.models import (
-    TestAttempt as TestAttemptModel,
-    UserAnswer as UserAnswerModel,
-)
+from trudex.infrastructure.database.models import \
+    TestAttempt as TestAttemptModel
+from trudex.infrastructure.database.models import UserAnswer as UserAnswerModel
 
 
 @final
@@ -177,7 +176,8 @@ class TestAttemptRepository:
         }
     
     async def get_most_difficult_questions(self, test_id: int, limit: int = 10) -> list[tuple[int, float]]:
-        from trudex.infrastructure.database.models import Question as QuestionModel
+        from trudex.infrastructure.database.models import \
+            Question as QuestionModel
         
         result = await self.session.execute(
             select(

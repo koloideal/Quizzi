@@ -7,10 +7,10 @@ from dishka.integrations.aiogram import FromDishka
 
 from trudex.application.bot.admin_dialogs.states import AdminMenuSG
 from trudex.application.bot.creator_dialogs.states import CreatorMenuSG
-from trudex.application.bot.user_dialogs.states import UserMenuSG, UserRegistrationSG
+from trudex.application.bot.user_dialogs.states import (UserMenuSG,
+                                                        UserRegistrationSG)
 from trudex.infrastructure.database.dao.group import GroupDAO
 from trudex.infrastructure.database.dao.user import UserDAO
-
 
 router = Router()
 

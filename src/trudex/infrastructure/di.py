@@ -12,7 +12,8 @@ from trudex.infrastructure.database.dao.test_attempt import TestAttemptDAO
 from trudex.infrastructure.database.dao.user import UserDAO
 from trudex.infrastructure.database.dao.user_answer import UserAnswerDAO
 from trudex.infrastructure.database.repo.test import TestRepository
-from trudex.infrastructure.database.repo.test_attempt import TestAttemptRepository
+from trudex.infrastructure.database.repo.test_attempt import \
+    TestAttemptRepository
 from trudex.infrastructure.database.repo.user import UserRepository
 from trudex.infrastructure.utils.config import Config
 

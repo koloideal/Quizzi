@@ -1,11 +1,14 @@
 from aiogram.types import CallbackQuery, Message
 from aiogram_dialog import Dialog, DialogManager, StartMode, Window
 from aiogram_dialog.widgets.input import MessageInput
-from aiogram_dialog.widgets.kbd import Button, Column, Row, ScrollingGroup, Select
+from aiogram_dialog.widgets.kbd import (Button, Column, Row, ScrollingGroup,
+                                        Select)
 from aiogram_dialog.widgets.text import Const, Format
-from dishka.integrations.aiogram import CONTAINER_NAME
+from dishka import FromDishka
+from dishka.integrations.aiogram_dialog import inject
 
-from trudex.application.bot.creator_dialogs.states import CreatorGroupsSG
+from trudex.application.bot.creator_dialogs.states import (CreatorGroupsSG,
+                                                           CreatorMenuSG)
 from trudex.infrastructure.database.dao.group import GroupDAO
 
 
@@ -13,10 +16,8 @@ async def on_group_click(_callback: CallbackQuery, _widget, _manager: DialogMana
     await _callback.answer("ℹ️ Для удаления используйте кнопку 'Удалить группу'")
 
 
-async def get_groups_data(dialog_manager: DialogManager, **_kwargs):
-    container = dialog_manager.middleware_data[CONTAINER_NAME]
-    group_dao = await container.get(GroupDAO)
-    
+@inject
+async def get_groups_data(group_dao: FromDishka[GroupDAO], dialog_manager: DialogManager, **_kwargs):
     groups = await group_dao.get_all()
     
     success_message = dialog_manager.dialog_data.pop("success_message", None)
@@ -46,7 +47,8 @@ async def on_back_to_menu(_callback: CallbackQuery, _button: Button, manager: Di
     await manager.start(CreatorMenuSG.main, mode=StartMode.RESET_STACK)
 
 
-async def on_group_number_input(message: Message, _widget: MessageInput, manager: DialogManager):
+@inject
+async def on_group_number_input(message: Message, _widget: MessageInput, manager: DialogManager, group_dao: FromDishka[GroupDAO]):
     if not message.text:
         await message.answer("❌ Номер группы не может быть пустым")
         return
@@ -62,9 +64,6 @@ async def on_group_number_input(message: Message, _widget: MessageInput, manager
     if number < 1000 or number > 9999:
         await message.answer("❌ Номер группы должен быть четырехзначным (1000-9999)")
         return
-    
-    container = manager.middleware_data[CONTAINER_NAME]
-    group_dao = await container.get(GroupDAO)
     
     existing = await group_dao.get_by_number(number)
     if existing:
@@ -85,10 +84,8 @@ async def on_cancel_add(_callback: CallbackQuery, _button: Button, manager: Dial
     await manager.switch_to(CreatorGroupsSG.groups_list)
 
 
-async def get_delete_groups_data(dialog_manager: DialogManager, **_kwargs):
-    container = dialog_manager.middleware_data[CONTAINER_NAME]
-    group_dao = await container.get(GroupDAO)
-    
+@inject
+async def get_delete_groups_data(group_dao: FromDishka[GroupDAO], **_kwargs):
     groups = await group_dao.get_all()
     
     return {
@@ -97,10 +94,8 @@ async def get_delete_groups_data(dialog_manager: DialogManager, **_kwargs):
     }
 
 
-async def on_select_group_to_delete(_callback: CallbackQuery, _widget, manager: DialogManager, item_id: str):
-    container = manager.middleware_data[CONTAINER_NAME]
-    group_dao = await container.get(GroupDAO)
-    
+@inject
+async def on_select_group_to_delete(_callback: CallbackQuery, _widget, manager: DialogManager, item_id: str, group_dao: FromDishka[GroupDAO]):
     group = await group_dao.get_by_id(int(item_id))
     if not group:
         await _callback.answer("❌ Группа не найдена", show_alert=True)
@@ -119,10 +114,8 @@ async def get_delete_confirm_data(dialog_manager: DialogManager, **_kwargs):
     }
 
 
-async def on_confirm_delete(_callback: CallbackQuery, _button: Button, manager: DialogManager):
-    container = manager.middleware_data[CONTAINER_NAME]
-    group_dao = await container.get(GroupDAO)
-    
+@inject
+async def on_confirm_delete(_callback: CallbackQuery, _button: Button, manager: DialogManager, group_dao: FromDishka[GroupDAO]):
     group_id = manager.dialog_data.get("delete_group_id")
     
     await group_dao.delete(group_id)

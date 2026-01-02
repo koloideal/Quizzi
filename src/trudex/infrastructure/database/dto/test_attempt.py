@@ -1,5 +1,6 @@
 from trudex.domain.schemas import TestAttempt as DomainTestAttempt
-from trudex.infrastructure.database.models import TestAttempt as TestAttemptModel
+from trudex.infrastructure.database.models import \
+    TestAttempt as TestAttemptModel
 
 
 class TestAttemptDTO:

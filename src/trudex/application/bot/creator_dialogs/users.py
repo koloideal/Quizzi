@@ -1,13 +1,14 @@
 from aiogram.types import CallbackQuery, Message
-from aiogram_dialog import Dialog, DialogManager, Window, StartMode
+from aiogram_dialog import Dialog, DialogManager, StartMode, Window
 from aiogram_dialog.widgets.input import MessageInput
-from aiogram_dialog.widgets.kbd import Button, Column, Row, ScrollingGroup, Select, SwitchTo
+from aiogram_dialog.widgets.kbd import (Button, Column, Row, ScrollingGroup,
+                                        Select, SwitchTo)
 from aiogram_dialog.widgets.text import Const, Format
 from dishka import FromDishka
-from dishka.integrations.aiogram import CONTAINER_NAME
 from dishka.integrations.aiogram_dialog import inject
 
-from trudex.application.bot.creator_dialogs.states import CreatorUsersSG, CreatorMenuSG
+from trudex.application.bot.creator_dialogs.states import (CreatorMenuSG,
+                                                           CreatorUsersSG)
 from trudex.infrastructure.database.dao.user import UserDAO
 
 
@@ -81,10 +82,8 @@ async def on_input_mode(_callback: CallbackQuery, _button: Button, manager: Dial
     await manager.switch_to(CreatorUsersSG.users_input)
 
 
-async def on_user_input(message: Message, _widget: MessageInput, manager: DialogManager):
-    container = manager.middleware_data[CONTAINER_NAME]
-    user_dao = await container.get(UserDAO)
-    
+@inject
+async def on_user_input(message: Message, _widget: MessageInput, manager: DialogManager, user_dao: FromDishka[UserDAO]):
     text = (message.text or "").strip()
     
     user = None
@@ -107,10 +106,8 @@ async def on_make_admin_clicked(_callback: CallbackQuery, _button: Button, manag
     await manager.switch_to(CreatorUsersSG.make_admin_confirm)
 
 
-async def on_confirm_yes(_callback: CallbackQuery, _button: Button, manager: DialogManager):
-    container = manager.middleware_data[CONTAINER_NAME]
-    user_dao = await container.get(UserDAO)
-    
+@inject
+async def on_confirm_yes(_callback: CallbackQuery, _button: Button, manager: DialogManager, user_dao: FromDishka[UserDAO]):
     user_id = manager.dialog_data.get("selected_user_id")
     if not user_id:
         await _callback.answer("Ошибка: пользователь не выбран")

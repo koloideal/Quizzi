@@ -2,17 +2,17 @@ from aiogram.types import CallbackQuery
 from aiogram_dialog import Dialog, DialogManager, StartMode, Window
 from aiogram_dialog.widgets.kbd import ScrollingGroup, Select
 from aiogram_dialog.widgets.text import Const, Format
-from dishka.integrations.aiogram import CONTAINER_NAME
+from dishka import FromDishka
+from dishka.integrations.aiogram_dialog import inject
 
-from trudex.application.bot.user_dialogs.states import UserMenuSG, UserRegistrationSG
+from trudex.application.bot.user_dialogs.states import (UserMenuSG,
+                                                        UserRegistrationSG)
 from trudex.infrastructure.database.dao.group import GroupDAO
 from trudex.infrastructure.database.dao.user import UserDAO
 
 
-async def get_groups_for_registration(dialog_manager: DialogManager, **_kwargs):
-    container = dialog_manager.middleware_data[CONTAINER_NAME]
-    group_dao = await container.get(GroupDAO)
-    
+@inject
+async def get_groups_for_registration(dialog_manager: DialogManager, group_dao: FromDishka[GroupDAO], **_kwargs):
     groups = await group_dao.get_all()
     
     return {
@@ -20,10 +20,8 @@ async def get_groups_for_registration(dialog_manager: DialogManager, **_kwargs):
     }
 
 
-async def on_group_selected(_callback: CallbackQuery, _widget, manager: DialogManager, item_id: str):
-    container = manager.middleware_data[CONTAINER_NAME]
-    user_dao = await container.get(UserDAO)
-    
+@inject
+async def on_group_selected(_callback: CallbackQuery, _widget, manager: DialogManager, item_id: str, user_dao: FromDishka[UserDAO]):
     user_id = manager.start_data.get("user_id")
     
     await user_dao.update(user_id=user_id, group=int(item_id))

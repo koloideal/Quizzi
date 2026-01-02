@@ -14,6 +14,7 @@ class CreatorUsersSG(StatesGroup):
 
 class CreatorTestsSG(StatesGroup):
     tests_list = State()
+    test_detail = State()
 
 
 class CreatorBroadcastSG(StatesGroup):

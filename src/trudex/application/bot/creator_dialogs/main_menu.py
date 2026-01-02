@@ -1,9 +1,13 @@
 from aiogram.types import CallbackQuery
-from aiogram_dialog import Dialog, DialogManager, Window, StartMode
+from aiogram_dialog import Dialog, DialogManager, StartMode, Window
 from aiogram_dialog.widgets.kbd import Button, Column
 from aiogram_dialog.widgets.text import Const
 
-from trudex.application.bot.creator_dialogs.states import CreatorMenuSG, CreatorUsersSG, CreatorTestsSG, CreatorBroadcastSG, CreatorGroupsSG
+from trudex.application.bot.creator_dialogs.states import (CreatorBroadcastSG,
+                                                           CreatorGroupsSG,
+                                                           CreatorMenuSG,
+                                                           CreatorTestsSG,
+                                                           CreatorUsersSG)
 
 
 async def on_tests_clicked(_callback: CallbackQuery, _button: Button, manager: DialogManager) -> None:

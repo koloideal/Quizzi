@@ -2,7 +2,8 @@ from datetime import datetime
 from enum import Enum
 from typing import final
 
-from sqlalchemy import BigInteger, CheckConstraint, ForeignKey, Integer, String, Text, func
+from sqlalchemy import (BigInteger, CheckConstraint, ForeignKey, Integer,
+                        String, Text, func)
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 

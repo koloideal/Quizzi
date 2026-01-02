@@ -13,6 +13,7 @@ class AdminUsersSG(StatesGroup):
 
 class AdminTestsSG(StatesGroup):
     tests_list = State()
+    test_detail = State()
 
 
 class AdminBroadcastSG(StatesGroup):

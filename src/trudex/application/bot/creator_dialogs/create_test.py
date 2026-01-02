@@ -1,14 +1,16 @@
 from datetime import date, datetime
 
 from aiogram.types import CallbackQuery, ContentType, Message
-from aiogram_dialog import Dialog, DialogManager, Window, StartMode
+from aiogram_dialog import Dialog, DialogManager, StartMode, Window
 from aiogram_dialog.widgets.input import MessageInput
-from aiogram_dialog.widgets.kbd import Button, Calendar, Cancel, Column, Row, ScrollingGroup, Select
+from aiogram_dialog.widgets.kbd import (Button, Calendar, Cancel, Column, Row,
+                                        ScrollingGroup, Select)
 from aiogram_dialog.widgets.text import Const, Format
-from dishka.integrations.aiogram import CONTAINER_NAME
+from dishka import FromDishka
 from dishka.integrations.aiogram_dialog import inject
 
-from trudex.application.bot.creator_dialogs.states import CreateTestSG, CreatorTestsSG
+from trudex.application.bot.creator_dialogs.states import (CreateTestSG,
+                                                           CreatorTestsSG)
 from trudex.infrastructure.database.dao.group import GroupDAO
 from trudex.infrastructure.database.dao.option import OptionDAO
 from trudex.infrastructure.database.dao.question import QuestionDAO
@@ -52,7 +54,8 @@ async def on_description_input(message: Message, _widget: MessageInput, manager:
     await manager.switch_to(CreateTestSG.input_password)
 
 
-async def on_password_input(message: Message, _widget: MessageInput, manager: DialogManager):
+@inject
+async def on_password_input(message: Message, _widget: MessageInput, manager: DialogManager, group_dao: FromDishka[GroupDAO]):
     if not message.text:
         await message.answer("❌ Пароль не может быть пустым")
         return
@@ -68,8 +71,6 @@ async def on_password_input(message: Message, _widget: MessageInput, manager: Di
     
     manager.dialog_data["password"] = password
     
-    container = manager.middleware_data[CONTAINER_NAME]
-    group_dao = await container.get(GroupDAO)
     groups = await group_dao.get_all()
     
     if len(groups) == 0:
@@ -79,10 +80,9 @@ async def on_password_input(message: Message, _widget: MessageInput, manager: Di
         await manager.switch_to(CreateTestSG.input_expires_at)
 
 
-async def on_skip_password(_callback: CallbackQuery, _button: Button, manager: DialogManager):
+@inject
+async def on_skip_password(_callback: CallbackQuery, _button: Button, manager: DialogManager, group_dao: FromDishka[GroupDAO]):
     manager.dialog_data["password"] = None
-    container = manager.middleware_data[CONTAINER_NAME]
-    group_dao = await container.get(GroupDAO)
     groups = await group_dao.get_all()
     
     if len(groups) == 0:
@@ -102,9 +102,8 @@ async def on_skip_expires(_callback: CallbackQuery, _button: Button, manager: Di
     await manager.switch_to(CreateTestSG.input_for_group)
 
 
-async def get_groups_for_test(dialog_manager: DialogManager, **_kwargs):
-    container = dialog_manager.middleware_data[CONTAINER_NAME]
-    group_dao = await container.get(GroupDAO)
+@inject
+async def get_groups_for_test(dialog_manager: DialogManager, group_dao: FromDishka[GroupDAO], **_kwargs):
     groups = await group_dao.get_all()
     
     return {
@@ -145,10 +144,8 @@ async def get_test_info(dialog_manager: DialogManager, **_kwargs):
     }
 
 
-async def on_confirm_test(_callback: CallbackQuery, _button: Button, manager: DialogManager):
-    container = manager.middleware_data[CONTAINER_NAME]
-    test_dao = await container.get(TestDAO)
-    
+@inject
+async def on_confirm_test(_callback: CallbackQuery, _button: Button, manager: DialogManager, test_dao: FromDishka[TestDAO]):
     title = manager.dialog_data.get("title")
     description = manager.dialog_data.get("description")
     password = manager.dialog_data.get("password")
@@ -351,12 +348,15 @@ async def get_question_preview(dialog_manager: DialogManager, **_kwargs):
     return {"preview": preview}
 
 
-async def on_save_question(_callback: CallbackQuery, _button: Button, manager: DialogManager):
-    container = manager.middleware_data[CONTAINER_NAME]
-    question_dao = await container.get(QuestionDAO)
-    option_dao = await container.get(OptionDAO)
-    test_repo = await container.get(TestRepository)
-    
+@inject
+async def on_save_question(
+    _callback: CallbackQuery,
+    _button: Button,
+    manager: DialogManager,
+    question_dao: FromDishka[QuestionDAO],
+    option_dao: FromDishka[OptionDAO],
+    test_repo: FromDishka[TestRepository],
+):
     test_id = manager.dialog_data.get("test_id")
     current_question = manager.dialog_data.get("current_question", {})
     current_options = manager.dialog_data.get("current_options", [])

@@ -11,11 +11,9 @@ from trudex.infrastructure.database.dao.test import TestDAO
 from trudex.infrastructure.database.dto.option import OptionDTO
 from trudex.infrastructure.database.dto.question import QuestionDTO
 from trudex.infrastructure.database.dto.test import TestDTO
-from trudex.infrastructure.database.models import (
-    Option as OptionModel,
-    Question as QuestionModel,
-    Test as TestModel,
-)
+from trudex.infrastructure.database.models import Option as OptionModel
+from trudex.infrastructure.database.models import Question as QuestionModel
+from trudex.infrastructure.database.models import Test as TestModel
 
 
 @final
