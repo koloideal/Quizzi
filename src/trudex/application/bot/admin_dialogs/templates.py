@@ -53,11 +53,11 @@ async def get_tests_for_export(test_dao: FromDishka[TestDAO], **_kwargs):
 @inject
 async def on_test_selected_for_export(
     _callback: CallbackQuery,
-    _widget: Select,
+    _widget: Select,  # type: ignore[type-arg]
     _manager: DialogManager,
     item_id: str,
     test_repo: FromDishka[TestRepository],
-):
+) -> None:
     test_id = int(item_id)
     test, questions_with_options = await test_repo.get_full_test(test_id)
     
@@ -70,6 +70,7 @@ async def on_test_selected_for_export(
         "description": test.description,
         "password": test.password,
         "attempts": test.attempts,
+        "expires_at": test.expires_at.isoformat() if test.expires_at else None,
         "for_group": test.for_group,
         "questions": [],
     }
@@ -102,7 +103,7 @@ async def on_test_selected_for_export(
     assert _callback.message is not None
     await _callback.message.answer_document(
         document=BufferedInputFile(json_str.encode("utf-8"), filename=filename),
-        caption=f"📤 <b>Экспорт теста</b>\n\n📝 {test.title}",
+        caption=f"📤 <b>Экспорт теста:</b> {test.title}",
     )
 
 
@@ -125,7 +126,7 @@ templates_dialog = Dialog(
                 id="test_select",
                 item_id_getter=lambda x: x[1],
                 items="tests",
-                on_click=on_test_selected_for_export,
+                on_click=on_test_selected_for_export,  # type: ignore[arg-type]
             ),
             id="tests_scroll",
             width=1,
