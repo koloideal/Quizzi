@@ -38,6 +38,7 @@ from trudex.application.bot.middlewares.reject_not_creator import \
 from trudex.application.bot.user_dialogs.main_menu import user_menu_dialog
 from trudex.application.bot.user_dialogs.registration import \
     registration_dialog
+from trudex.application.bot.user_dialogs.take_test import take_test_dialog
 from trudex.infrastructure.database.repo.user import UserRepository
 from trudex.infrastructure.di import DatabaseProvider, SchedulerProvider
 from trudex.infrastructure.utils.bot_commands import setup_bot_commands
@@ -62,6 +63,7 @@ async def main() -> None:
     dp.include_routers(
         router,
         user_menu_dialog,
+        take_test_dialog,
         registration_dialog,
         admin_menu_dialog,
         admin_users_dialog,

@@ -9,6 +9,7 @@ from dishka import FromDishka
 from dishka.integrations.aiogram_dialog import inject
 
 from trudex.application.bot.user_dialogs.states import UserMenuSG
+from trudex.application.bot.user_dialogs.take_test import on_start_test
 from trudex.infrastructure.database.dao.group import GroupDAO
 from trudex.infrastructure.database.dao.user import UserDAO
 from trudex.infrastructure.database.repo.test import TestRepository
@@ -172,7 +173,53 @@ async def get_available_tests(
 
 
 async def on_test_selected(_callback: CallbackQuery, _widget: Select, manager: DialogManager, item_id: str):
-    await _callback.answer("🚧 В разработке")
+    manager.dialog_data["selected_test_id"] = int(item_id)
+    await manager.switch_to(UserMenuSG.test_detail)
+
+
+async def on_back_to_tests(_callback: CallbackQuery, _button: Button, manager: DialogManager):
+    await manager.switch_to(UserMenuSG.available_tests)
+
+
+@inject
+async def get_test_detail(
+    dialog_manager: DialogManager,
+    test_repo: FromDishka[TestRepository],
+    attempt_repo: FromDishka[TestAttemptRepository],
+    user_dao: FromDishka[UserDAO],
+    **_kwargs
+):
+    test_id = dialog_manager.dialog_data.get("selected_test_id")
+    user_id = dialog_manager.event.from_user.id
+    
+    if not test_id:
+        return {"test_info": "❌ Тест не найден"}
+    
+    test, questions = await test_repo.get_test_with_questions(test_id)
+    
+    if not test:
+        return {"test_info": "❌ Тест не найден"}
+    
+    user = await user_dao.get_by_id(user_id)
+    attempts = await attempt_repo.get_user_test_attempts(user_id, test_id)
+    finished_attempts = [a for a in attempts if a.finished_at]
+    
+    password_str = f"🔒 Требуется пароль" if test.password else "🔓 Без пароля"
+    attempts_str = f"🔄 Попыток: {len(finished_attempts)}/{test.attempts}" if test.attempts else f"🔄 Попыток: {len(finished_attempts)}/♾️"
+    expires_str = f"📅 До {test.expires_at.strftime('%d.%m.%Y %H:%M')}" if test.expires_at else "📅 Без срока"
+    group_str = f"🎓 Для группы {test.for_group}" if test.for_group else "👥 Для всех"
+    
+    test_info = (
+        f"<b>📝 {test.title}</b>\n\n"
+        f"<blockquote>{test.description or '—'}</blockquote>\n\n"
+        f"<b>Вопросов:</b> {len(questions)}\n"
+        f"{password_str}\n"
+        f"{attempts_str}\n"
+        f"{expires_str}\n"
+        f"{group_str}"
+    )
+    
+    return {"test_info": test_info}
 
 
 user_menu_dialog = Dialog(
@@ -206,6 +253,15 @@ user_menu_dialog = Dialog(
         Button(Const("◀️ Назад"), id="back", on_click=on_back_to_main),
         state=UserMenuSG.available_tests,
         getter=get_available_tests,
+    ),
+    Window(
+        Format("{test_info}"),
+        Column(
+            Button(Const("▶️ Пройти тест"), id="start_test", on_click=on_start_test),
+            Button(Const("◀️ Назад"), id="back", on_click=on_back_to_tests),
+        ),
+        state=UserMenuSG.test_detail,
+        getter=get_test_detail,
     ),
     Window(
         Const("<b>✏️ Изменение имени</b>\n\nВведите новое имя:"),
