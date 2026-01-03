@@ -6,6 +6,7 @@ from aiogram_dialog.widgets.text import Const
 from trudex.application.bot.creator_dialogs.states import (CreatorBroadcastSG,
                                                            CreatorGroupsSG,
                                                            CreatorMenuSG,
+                                                           CreatorTemplatesSG,
                                                            CreatorTestsSG,
                                                            CreatorUsersSG)
 
@@ -26,6 +27,10 @@ async def on_broadcast_clicked(_callback: CallbackQuery, _button: Button, manage
     await manager.start(CreatorBroadcastSG.broadcast_input, mode=StartMode.RESET_STACK)
 
 
+async def on_templates_clicked(_callback: CallbackQuery, _button: Button, manager: DialogManager) -> None:
+    await manager.start(CreatorTemplatesSG.main, mode=StartMode.RESET_STACK)
+
+
 creator_menu_dialog = Dialog(
     Window(
         Const("👑 <b>Панель создателя</b>\n\nВыберите раздел:"),
@@ -34,6 +39,7 @@ creator_menu_dialog = Dialog(
             Button(Const("👥 Пользователи"), id="users", on_click=on_users_clicked),
             Button(Const("🎓 Группы"), id="groups", on_click=on_groups_clicked),
             Button(Const("📢 Рассылка"), id="broadcast", on_click=on_broadcast_clicked),
+            Button(Const("📦 Шаблоны тестов"), id="templates", on_click=on_templates_clicked),
         ),
         state=CreatorMenuSG.main,
     ),

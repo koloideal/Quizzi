@@ -14,6 +14,8 @@ from trudex.application.bot.admin_dialogs.broadcast import \
 from trudex.application.bot.admin_dialogs.groups import \
     groups_dialog as admin_groups_dialog
 from trudex.application.bot.admin_dialogs.main_menu import admin_menu_dialog
+from trudex.application.bot.admin_dialogs.templates import \
+    templates_dialog as admin_templates_dialog
 from trudex.application.bot.admin_dialogs.tests import \
     tests_dialog as admin_tests_dialog
 from trudex.application.bot.admin_dialogs.users import \
@@ -26,6 +28,8 @@ from trudex.application.bot.creator_dialogs.groups import \
     groups_dialog as creator_groups_dialog
 from trudex.application.bot.creator_dialogs.main_menu import \
     creator_menu_dialog
+from trudex.application.bot.creator_dialogs.templates import \
+    templates_dialog as creator_templates_dialog
 from trudex.application.bot.creator_dialogs.tests import \
     tests_dialog as creator_tests_dialog
 from trudex.application.bot.creator_dialogs.users import \
@@ -72,11 +76,13 @@ async def main() -> None:
         admin_tests_dialog,
         admin_groups_dialog,
         admin_broadcast_dialog,
+        admin_templates_dialog,
         creator_menu_dialog,
         creator_users_dialog,
         creator_tests_dialog,
         creator_groups_dialog,
         creator_broadcast_dialog,
+        creator_templates_dialog,
         create_test_dialog,
     )
     

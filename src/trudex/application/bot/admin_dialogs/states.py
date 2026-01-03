@@ -5,6 +5,11 @@ class AdminMenuSG(StatesGroup):
     main = State()
 
 
+class AdminTemplatesSG(StatesGroup):
+    main = State()
+    export_list = State()
+
+
 class AdminUsersSG(StatesGroup):
     users_list = State()
     users_input = State()

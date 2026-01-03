@@ -5,6 +5,11 @@ class CreatorMenuSG(StatesGroup):
     main = State()
 
 
+class CreatorTemplatesSG(StatesGroup):
+    main = State()
+    export_list = State()
+
+
 class CreatorUsersSG(StatesGroup):
     users_list = State()
     users_input = State()
