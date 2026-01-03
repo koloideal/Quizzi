@@ -152,3 +152,35 @@ class TestRepository:
                 )
         
         return new_test
+
+    async def get_available_tests_for_user(self, user_id: int, user_group: int | None) -> list[Test]:
+        from trudex.infrastructure.database.models import TestAttempt
+        
+        subquery = (
+            select(
+                TestAttempt.test_id,
+                func.count(TestAttempt.id).label("attempts_count")
+            )
+            .where(TestAttempt.user_id == user_id)
+            .where(TestAttempt.finished_at.isnot(None))
+            .group_by(TestAttempt.test_id)
+            .subquery()
+        )
+        
+        query = (
+            select(TestModel)
+            .outerjoin(subquery, TestModel.id == subquery.c.test_id)
+            .where(TestModel.is_active == True)
+            .where(
+                (TestModel.for_group == user_group) | (TestModel.for_group.is_(None))
+            )
+            .where(
+                (TestModel.attempts.is_(None)) | 
+                (subquery.c.attempts_count.is_(None)) |
+                (subquery.c.attempts_count < TestModel.attempts)
+            )
+        )
+        
+        result = await self.session.execute(query)
+        models = list(result.scalars().all())
+        return [TestDTO(model).to_domain() for model in models]

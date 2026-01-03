@@ -11,6 +11,7 @@ from dishka.integrations.aiogram_dialog import inject
 from trudex.application.bot.user_dialogs.states import UserMenuSG
 from trudex.infrastructure.database.dao.group import GroupDAO
 from trudex.infrastructure.database.dao.user import UserDAO
+from trudex.infrastructure.database.repo.test import TestRepository
 from trudex.infrastructure.database.repo.test_attempt import TestAttemptRepository
 
 
@@ -101,8 +102,8 @@ async def on_edit_group_clicked(
     await manager.switch_to(UserMenuSG.edit_group)
 
 
-async def on_tests_clicked(_callback: CallbackQuery, _button: Button, _manager: DialogManager):
-    await _callback.answer("🚧 В разработке")
+async def on_tests_clicked(_callback: CallbackQuery, _button: Button, manager: DialogManager):
+    await manager.switch_to(UserMenuSG.available_tests)
 
 
 async def on_results_clicked(_callback: CallbackQuery, _button: Button, _manager: DialogManager):
@@ -149,6 +150,31 @@ async def on_group_selected(
     await manager.switch_to(UserMenuSG.main)
 
 
+@inject
+async def get_available_tests(
+    dialog_manager: DialogManager,
+    user_dao: FromDishka[UserDAO],
+    test_repo: FromDishka[TestRepository],
+    **_kwargs
+):
+    user_id = dialog_manager.event.from_user.id
+    user = await user_dao.get_by_id(user_id)
+    
+    if not user:
+        return {"tests": [], "count": 0}
+    
+    tests = await test_repo.get_available_tests_for_user(user_id, user.group)
+    
+    return {
+        "tests": [(f"📝 {t.title}", t.id) for t in tests],
+        "count": len(tests),
+    }
+
+
+async def on_test_selected(_callback: CallbackQuery, _widget: Select, manager: DialogManager, item_id: str):
+    await _callback.answer("🚧 В разработке")
+
+
 user_menu_dialog = Dialog(
     Window(
         Format("{user_info}"),
@@ -162,6 +188,24 @@ user_menu_dialog = Dialog(
         ),
         state=UserMenuSG.main,
         getter=get_user_data,
+    ),
+    Window(
+        Format("<b>📝 Доступные тесты</b>\n\nВсего: {count}"),
+        ScrollingGroup(
+            Select(
+                Format("{item[0]}"),
+                id="test_select",
+                item_id_getter=lambda x: x[1],
+                items="tests",
+                on_click=on_test_selected,
+            ),
+            id="tests_scroll",
+            width=1,
+            height=7,
+        ),
+        Button(Const("◀️ Назад"), id="back", on_click=on_back_to_main),
+        state=UserMenuSG.available_tests,
+        getter=get_available_tests,
     ),
     Window(
         Const("<b>✏️ Изменение имени</b>\n\nВведите новое имя:"),
