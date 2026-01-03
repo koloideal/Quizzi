@@ -1,6 +1,9 @@
+import asyncio
+import functools
 from datetime import datetime, timedelta, timezone
 
-from aiogram.types import CallbackQuery, Message
+from aiogram import Bot
+from aiogram.types import BufferedInputFile, CallbackQuery, Message
 from aiogram_dialog import Dialog, DialogManager, Window
 from aiogram_dialog.widgets.input import MessageInput
 from aiogram_dialog.widgets.kbd import Button, Column, Row, ScrollingGroup, Select
@@ -14,6 +17,9 @@ from trudex.infrastructure.database.dao.group import GroupDAO
 from trudex.infrastructure.database.dao.user import UserDAO
 from trudex.infrastructure.database.repo.test import TestRepository
 from trudex.infrastructure.database.repo.test_attempt import TestAttemptRepository
+from trudex.infrastructure.utils.config import Config
+from trudex.infrastructure.utils.qr_generator import generate_qr_bytes
+from trudex.infrastructure.utils.test_id_to_hash import encode_id
 
 
 @inject
@@ -190,6 +196,44 @@ async def on_back_to_tests(_callback: CallbackQuery, _button: Button, manager: D
 
 
 @inject
+async def on_share_test(
+    _callback: CallbackQuery,
+    _button: Button,
+    manager: DialogManager,
+    config: FromDishka[Config],
+    bot_inst: FromDishka[Bot],
+):
+    test_id = manager.dialog_data.get("selected_test_id")
+    
+    if not test_id:
+        await _callback.answer("Ошибка: тест не найден")
+        return
+    
+    test_hash = encode_id(
+        test_id,
+        config.security.encode_key,
+        config.security.encoded_string_length,
+    )
+    
+    bot_info = await bot_inst.get_me()
+    bot_username = bot_info.username or "your_bot"
+    share_link = f"https://t.me/{bot_username}?start={test_hash}"
+    
+    loop = asyncio.get_running_loop()
+    qr_bytes = await loop.run_in_executor(
+        None,
+        functools.partial(generate_qr_bytes, share_link),
+    )
+
+    assert _callback.message is not None
+
+    await _callback.message.answer_photo(
+        photo=BufferedInputFile(qr_bytes, filename="qr.png"),
+        caption=f"<b>🔗 Поделиться тестом</b>\n\n📎 <b>Ссылка на тест:</b>\n<code>{share_link}</code>\n\n💡 Отправьте эту ссылку или QR-код пользователям для прохождения теста",
+    )
+
+
+@inject
 async def get_test_detail(
     dialog_manager: DialogManager,
     test_repo: FromDishka[TestRepository],
@@ -349,6 +393,7 @@ user_menu_dialog = Dialog(
         Format("{test_info}"),
         Column(
             Button(Const("▶️ Пройти тест"), id="start_test", on_click=on_start_test),
+            Button(Const("🔗 Поделиться"), id="share", on_click=on_share_test),
             Button(Const("◀️ Назад"), id="back", on_click=on_back_to_tests),
         ),
         state=UserMenuSG.test_detail,
