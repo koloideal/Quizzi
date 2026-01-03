@@ -49,7 +49,7 @@ async def on_broadcast_confirm(_callback: CallbackQuery, _button: Button, manage
 
 async def on_broadcast_cancel(_callback: CallbackQuery, _button: Button, manager: DialogManager):
     await _callback.answer("Рассылка отменена")
-    await manager.done()
+    await manager.start(AdminMenuSG.main, mode=StartMode.RESET_STACK)
 
 
 async def on_back_to_main(_callback: CallbackQuery, _button: Button, manager: DialogManager):

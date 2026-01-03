@@ -24,7 +24,7 @@ from trudex.infrastructure.database.dao.test import TestDAO
 from trudex.infrastructure.database.repo.test import TestRepository
 from trudex.infrastructure.utils.config import Config
 from trudex.infrastructure.utils.qr_generator import generate_qr_bytes
-from trudex.infrastructure.utils.test_id_to_hash import generate_alpha_id
+from trudex.infrastructure.utils.test_id_to_hash import encode_id
 
 
 @inject
@@ -114,6 +114,10 @@ async def on_back_to_list(_callback: CallbackQuery, _button: Button, manager: Di
     await manager.switch_to(CreatorTestsSG.tests_list)
 
 
+async def on_statistics(_callback: CallbackQuery, _button: Button, _manager: DialogManager):
+    await _callback.answer("🚧 В разработке")
+
+
 @inject
 async def on_share_test(_callback: CallbackQuery, _button: Button, manager: DialogManager, config: FromDishka[Config], bot_inst: FromDishka[Bot]):
     test_id = manager.dialog_data.get("selected_test_id")
@@ -123,10 +127,10 @@ async def on_share_test(_callback: CallbackQuery, _button: Button, manager: Dial
             "share_link": "Ошибка: тест не найден"
         }
     
-    test_hash = generate_alpha_id(
+    test_hash = encode_id(
         test_id, 
-        config.security.test_hash_salt,
-        config.security.test_hash_length
+        config.security.encode_key,
+        config.security.encoded_string_length
     )
     
     bot_info = await bot_inst.get_me()
@@ -348,6 +352,7 @@ tests_dialog = Dialog(
                 id="toggle_active",
                 on_click=on_toggle_active
             ),
+            Button(Const("📊 Статистика"), id="statistics", on_click=on_statistics),
             Button(Const("🔗 Поделиться"), id="share", on_click=on_share_test),
             Button(Const("✏️ Изменить"), id="edit_menu", on_click=on_edit_menu),
             Button(Const("◀️ Назад"), id="back", on_click=on_back_to_list),

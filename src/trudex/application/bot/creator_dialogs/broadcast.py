@@ -1,12 +1,13 @@
 from aiogram.types import CallbackQuery, Message
-from aiogram_dialog import Dialog, DialogManager, Window
+from aiogram_dialog import Dialog, DialogManager, StartMode, Window
 from aiogram_dialog.widgets.input import MessageInput
-from aiogram_dialog.widgets.kbd import Button, Cancel, Row
+from aiogram_dialog.widgets.kbd import Button, Row
 from aiogram_dialog.widgets.text import Const
 from dishka import FromDishka
 from dishka.integrations.aiogram_dialog import inject
 
-from trudex.application.bot.creator_dialogs.states import CreatorBroadcastSG
+from trudex.application.bot.creator_dialogs.states import (CreatorBroadcastSG,
+                                                           CreatorMenuSG)
 from trudex.infrastructure.database.dao.user import UserDAO
 from trudex.infrastructure.utils.broadcast import broadcast_message
 
@@ -48,7 +49,7 @@ async def on_broadcast_confirm(_callback: CallbackQuery, _button: Button, manage
 
 async def on_broadcast_cancel(_callback: CallbackQuery, _button: Button, manager: DialogManager):
     await _callback.answer("Рассылка отменена")
-    await manager.done()
+    await manager.start(CreatorMenuSG.main, mode=StartMode.RESET_STACK)
 
 
 async def on_back_to_main(_callback: CallbackQuery, _button: Button, manager: DialogManager):

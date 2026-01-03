@@ -12,8 +12,8 @@ class BotConfig:
 
 @dataclass
 class SecurityConfig:
-    test_hash_salt: str
-    test_hash_length: int = 16
+    encode_key: str
+    encoded_string_length: int = 8
 
 
 @dataclass
@@ -57,7 +57,7 @@ class Config:
                 database=str(db_data["database"])
             ),
             security=SecurityConfig(
-                test_hash_salt=str(security_data["test_hash_salt"]),
-                test_hash_length=int(security_data.get("test_hash_length", 16))
+                encode_key=str(security_data["encode_key"]),
+                encoded_string_length=int(security_data.get("encoded_string_length", 8))
             )
         )

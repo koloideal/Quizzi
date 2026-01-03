@@ -3,13 +3,11 @@ import functools
 from datetime import date, datetime
 
 from aiogram import Bot
-from aiogram.enums import ContentType
 from aiogram.types import BufferedInputFile, CallbackQuery, Message
 from aiogram_dialog import Dialog, DialogManager, StartMode, Window
 from aiogram_dialog.widgets.input import MessageInput
-from aiogram_dialog.widgets.kbd import (Button, Calendar, Column, Row,
+from aiogram_dialog.widgets.kbd import (Button, Calendar, Column,
                                         ScrollingGroup, Select)
-from aiogram_dialog.widgets.media import DynamicMedia
 from aiogram_dialog.widgets.text import Const, Format
 from dishka import FromDishka
 from dishka.integrations.aiogram_dialog import inject
@@ -21,7 +19,7 @@ from trudex.infrastructure.database.dao.test import TestDAO
 from trudex.infrastructure.database.repo.test import TestRepository
 from trudex.infrastructure.utils.config import Config
 from trudex.infrastructure.utils.qr_generator import generate_qr_bytes
-from trudex.infrastructure.utils.test_id_to_hash import generate_alpha_id
+from trudex.infrastructure.utils.test_id_to_hash import encode_id
 
 
 @inject
@@ -111,54 +109,40 @@ async def on_back_to_list(_callback: CallbackQuery, _button: Button, manager: Di
     await manager.switch_to(AdminTestsSG.tests_list)
 
 
-async def on_share_test(_callback: CallbackQuery, _button: Button, manager: DialogManager):
-    await manager.switch_to(AdminTestsSG.share_test)
+async def on_statistics(_callback: CallbackQuery, _button: Button, _manager: DialogManager):
+    await _callback.answer("🚧 В разработке")
 
 
 @inject
-async def get_share_data(dialog_manager: DialogManager, config: FromDishka[Config], bot: FromDishka[Bot], **_kwargs):
-    test_id = dialog_manager.dialog_data.get("selected_test_id")
+async def on_share_test(_callback: CallbackQuery, _button: Button, manager: DialogManager, config: FromDishka[Config], bot_inst: FromDishka[Bot]):
+    test_id = manager.dialog_data.get("selected_test_id")
     
     if not test_id:
-        return {
-            "share_link": "Ошибка: тест не найден"
-        }
+        await _callback.answer("Ошибка: тест не найден")
+        return
     
-    # Генерируем хэш и ссылку
-    test_hash = generate_alpha_id(
+    test_hash = encode_id(
         test_id, 
-        config.security.test_hash_salt,
-        config.security.test_hash_length
+        config.security.encode_key,
+        config.security.encoded_string_length
     )
     
-    bot_info = await bot.get_me()
+    bot_info = await bot_inst.get_me()
     bot_username = bot_info.username or "your_bot"
     share_link = f"https://t.me/{bot_username}?start={test_hash}"
     
-    # Генерируем QR-код в отдельном потоке
     loop = asyncio.get_running_loop()
     qr_bytes = await loop.run_in_executor(
         None,
         functools.partial(generate_qr_bytes, share_link)
     )
-    
-    # Сохраняем в dialog_data для использования в media selector
-    dialog_manager.dialog_data["qr_bytes"] = qr_bytes
-    
-    return {
-        "share_link": share_link,
-    }
 
+    assert _callback.message is not None
 
-async def qr_media_selector(data: dict, widget, manager: DialogManager):
-    """Селектор для получения QR-кода из dialog_data"""
-    qr_bytes = manager.dialog_data.get("qr_bytes")
-    if not qr_bytes:
-        return None
-    return {
-        "type": ContentType.PHOTO,
-        "media": BufferedInputFile(qr_bytes, filename="qr.png")
-    }
+    await _callback.message.answer_photo(
+        photo=BufferedInputFile(qr_bytes, filename="qr.png"),
+        caption=f"<b>🔗 Поделиться тестом</b>\n\n📎 <b>Ссылка на тест:</b>\n<code>{share_link}</code>\n\n💡 Отправьте эту ссылку или QR-код пользователям для прохождения теста"
+    )
 
 
 async def on_edit_menu(_callback: CallbackQuery, _button: Button, manager: DialogManager):
@@ -362,6 +346,7 @@ tests_dialog = Dialog(
                 id="toggle_active",
                 on_click=on_toggle_active
             ),
+            Button(Const("📊 Статистика"), id="statistics", on_click=on_statistics),
             Button(Const("🔗 Поделиться"), id="share", on_click=on_share_test),
             Button(Const("✏️ Изменить"), id="edit_menu", on_click=on_edit_menu),
             Button(Const("◀️ Назад"), id="back", on_click=on_back_to_list),
@@ -427,12 +412,5 @@ tests_dialog = Dialog(
             Button(Const("◀️ Назад"), id="back", on_click=on_back_to_edit_menu),
         ),
         state=AdminTestsSG.edit_expires,
-    ),
-    Window(
-        Format("<b>🔗 Поделиться тестом</b>\n\n📎 <b>Ссылка на тест:</b>\n<code>{share_link}</code>\n\n💡 Отправьте эту ссылку или QR-код пользователям для прохождения теста"),
-        DynamicMedia(selector=qr_media_selector),
-        Button(Const("◀️ Назад"), id="back", on_click=on_back_to_list),
-        state=AdminTestsSG.share_test,
-        getter=get_share_data,
     ),
 )
