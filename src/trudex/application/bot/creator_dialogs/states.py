@@ -8,6 +8,7 @@ class CreatorMenuSG(StatesGroup):
 class CreatorTemplatesSG(StatesGroup):
     main = State()
     export_list = State()
+    spec = State()
 
 
 class CreatorUsersSG(StatesGroup):

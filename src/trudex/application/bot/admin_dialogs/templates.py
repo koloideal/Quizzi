@@ -20,6 +20,145 @@ TEMPLATES_INFO = (
     "🔹 <b>Спецификация</b> — описание формата JSON для создания тестов вручную"
 )
 
+SPEC_INFO = """<b>📋 Спецификация формата JSON</b>
+
+<b>Структура файла:</b>
+<code>{
+  "title": "Название теста",
+  "description": "Описание теста",
+  "password": null,
+  "attempts": null,
+  "expires_at": null,
+  "for_group": null,
+  "questions": [...]
+}</code>
+
+<b>Поля теста:</b>
+• <code>title</code> — название (обязательно, до 255 символов)
+• <code>description</code> — описание (до 2000 символов)
+• <code>password</code> — пароль для доступа или <code>null</code>
+• <code>attempts</code> — лимит попыток (1-100) или <code>null</code>
+• <code>expires_at</code> — срок действия в ISO формате или <code>null</code>
+• <code>for_group</code> — номер группы или <code>null</code> для всех
+
+<b>Типы вопросов:</b>
+• <code>single</code> — один правильный ответ
+• <code>multiple</code> — несколько правильных ответов
+• <code>input</code> — ввод текста (регистр и пробелы игнорируются)
+
+<b>Формат вопроса (single/multiple):</b>
+<code>{
+  "text": "Текст вопроса",
+  "question_type": "single",
+  "options": [
+    {"text": "Вариант 1", "is_correct": true},
+    {"text": "Вариант 2", "is_correct": false}
+  ]
+}</code>
+
+<b>Формат вопроса (input):</b>
+<code>{
+  "text": "Текст вопроса",
+  "question_type": "input",
+  "correct_answer": "правильный ответ"
+}</code>
+
+<b>⚠️ Важно:</b>
+• Для <code>single</code> — ровно один <code>is_correct: true</code>
+• Для <code>multiple</code> — один или более <code>is_correct: true</code>
+• Минимум 2 варианта ответа для single/multiple"""
+
+TEMPLATE_SINGLE = {
+    "title": "Пример теста с одиночным выбором",
+    "description": "Демонстрация формата single вопросов",
+    "password": None,
+    "attempts": None,
+    "expires_at": None,
+    "for_group": None,
+    "questions": [
+        {
+            "text": "Какой язык программирования используется для разработки Telegram ботов?",
+            "question_type": "single",
+            "options": [
+                {"text": "Python", "is_correct": True},
+                {"text": "HTML", "is_correct": False},
+                {"text": "CSS", "is_correct": False},
+            ],
+        },
+    ],
+}
+
+TEMPLATE_MULTIPLE = {
+    "title": "Пример теста с множественным выбором",
+    "description": "Демонстрация формата multiple вопросов",
+    "password": None,
+    "attempts": None,
+    "expires_at": None,
+    "for_group": None,
+    "questions": [
+        {
+            "text": "Выберите языки программирования:",
+            "question_type": "multiple",
+            "options": [
+                {"text": "Python", "is_correct": True},
+                {"text": "JavaScript", "is_correct": True},
+                {"text": "HTML", "is_correct": False},
+                {"text": "CSS", "is_correct": False},
+            ],
+        },
+    ],
+}
+
+TEMPLATE_INPUT = {
+    "title": "Пример теста с вводом текста",
+    "description": "Демонстрация формата input вопросов",
+    "password": None,
+    "attempts": None,
+    "expires_at": None,
+    "for_group": None,
+    "questions": [
+        {
+            "text": "Как называется библиотека для создания Telegram ботов на Python?",
+            "question_type": "input",
+            "correct_answer": "aiogram",
+        },
+    ],
+}
+
+TEMPLATE_FULL = {
+    "title": "Полный пример теста",
+    "description": "Тест со всеми типами вопросов и настройками",
+    "password": "secret123",
+    "attempts": 3,
+    "expires_at": "2026-12-31T23:59:59",
+    "for_group": 1234,
+    "questions": [
+        {
+            "text": "Выберите правильный ответ:",
+            "question_type": "single",
+            "options": [
+                {"text": "Вариант A", "is_correct": False},
+                {"text": "Вариант B", "is_correct": True},
+                {"text": "Вариант C", "is_correct": False},
+            ],
+        },
+        {
+            "text": "Выберите все правильные ответы:",
+            "question_type": "multiple",
+            "options": [
+                {"text": "Ответ 1", "is_correct": True},
+                {"text": "Ответ 2", "is_correct": True},
+                {"text": "Ответ 3", "is_correct": False},
+            ],
+        },
+        {
+            "text": "Введите ответ:",
+            "question_type": "input",
+            "correct_answer": "ответ",
+        },
+    ],
+}
+
 
 async def on_export_clicked(_callback: CallbackQuery, _button: Button, manager: DialogManager) -> None:
     await manager.switch_to(AdminTemplatesSG.export_list)
@@ -29,8 +168,8 @@ async def on_import_clicked(_callback: CallbackQuery, _button: Button, _manager:
     await _callback.answer("🚧 В разработке", show_alert=True)
 
 
-async def on_spec_clicked(_callback: CallbackQuery, _button: Button, _manager: DialogManager) -> None:
-    await _callback.answer("🚧 В разработке", show_alert=True)
+async def on_spec_clicked(_callback: CallbackQuery, _button: Button, manager: DialogManager) -> None:
+    await manager.switch_to(AdminTemplatesSG.spec)
 
 
 async def on_back_clicked(_callback: CallbackQuery, _button: Button, manager: DialogManager) -> None:
@@ -97,7 +236,7 @@ async def on_test_selected_for_export(
     
     json_str = json.dumps(export_data, ensure_ascii=False, indent=2)
     
-    safe_title = "".join(c if c.isalnum() or c in " -_" else "_" for c in test.title)[:50]
+    safe_title = "".join(c if c.isalnum() or c in "-_" else "_" for c in test.title)[:50]
     filename = f"{safe_title}.json"
     
     assert _callback.message is not None
@@ -105,6 +244,33 @@ async def on_test_selected_for_export(
         document=BufferedInputFile(json_str.encode("utf-8"), filename=filename),
         caption=f"📤 <b>Экспорт теста:</b> {test.title}",
     )
+
+
+async def send_template(callback: CallbackQuery, template: dict, name: str) -> None:
+    json_str = json.dumps(template, ensure_ascii=False, indent=2)
+    filename = f"template_{name}.json"
+    
+    assert callback.message is not None
+    await callback.message.answer_document(
+        document=BufferedInputFile(json_str.encode("utf-8"), filename=filename),
+        caption=f"📄 <b>Шаблон:</b> {template['title']}",
+    )
+
+
+async def on_template_single(_callback: CallbackQuery, _button: Button, _manager: DialogManager) -> None:
+    await send_template(_callback, TEMPLATE_SINGLE, "single")
+
+
+async def on_template_multiple(_callback: CallbackQuery, _button: Button, _manager: DialogManager) -> None:
+    await send_template(_callback, TEMPLATE_MULTIPLE, "multiple")
+
+
+async def on_template_input(_callback: CallbackQuery, _button: Button, _manager: DialogManager) -> None:
+    await send_template(_callback, TEMPLATE_INPUT, "input")
+
+
+async def on_template_full(_callback: CallbackQuery, _button: Button, _manager: DialogManager) -> None:
+    await send_template(_callback, TEMPLATE_FULL, "full")
 
 
 templates_dialog = Dialog(
@@ -135,5 +301,18 @@ templates_dialog = Dialog(
         Button(Const("◀️ Назад"), id="back", on_click=on_back_to_templates),
         state=AdminTemplatesSG.export_list,
         getter=get_tests_for_export,
+    ),
+    Window(
+        Const(SPEC_INFO),
+        Row(
+            Button(Const("📌 Single"), id="tpl_single", on_click=on_template_single),
+            Button(Const("📋 Multiple"), id="tpl_multiple", on_click=on_template_multiple),
+        ),
+        Row(
+            Button(Const("✏️ Input"), id="tpl_input", on_click=on_template_input),
+            Button(Const("📦 Полный"), id="tpl_full", on_click=on_template_full),
+        ),
+        Button(Const("◀️ Назад"), id="back", on_click=on_back_to_templates),
+        state=AdminTemplatesSG.spec,
     ),
 )

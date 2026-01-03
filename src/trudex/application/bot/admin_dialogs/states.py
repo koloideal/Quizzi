@@ -8,6 +8,7 @@ class AdminMenuSG(StatesGroup):
 class AdminTemplatesSG(StatesGroup):
     main = State()
     export_list = State()
+    spec = State()
 
 
 class AdminUsersSG(StatesGroup):
