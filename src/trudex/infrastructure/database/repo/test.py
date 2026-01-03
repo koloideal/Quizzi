@@ -179,6 +179,7 @@ class TestRepository:
                 (subquery.c.attempts_count.is_(None)) |
                 (subquery.c.attempts_count < TestModel.attempts)
             )
+            .order_by(TestModel.created_at.desc())
         )
         
         result = await self.session.execute(query)

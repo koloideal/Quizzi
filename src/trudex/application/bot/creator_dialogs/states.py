@@ -10,6 +10,7 @@ class CreatorUsersSG(StatesGroup):
     users_input = State()
     user_detail = State()
     make_admin_confirm = State()
+    remove_admin_confirm = State()
 
 
 class CreatorTestsSG(StatesGroup):

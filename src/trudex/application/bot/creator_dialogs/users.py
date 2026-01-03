@@ -1,3 +1,6 @@
+import asyncio
+
+from aiogram import Bot
 from aiogram.types import CallbackQuery, Message
 from aiogram_dialog import Dialog, DialogManager, StartMode, Window
 from aiogram_dialog.widgets.input import MessageInput
@@ -10,18 +13,22 @@ from dishka.integrations.aiogram_dialog import inject
 from trudex.application.bot.creator_dialogs.states import (CreatorMenuSG,
                                                            CreatorUsersSG)
 from trudex.infrastructure.database.dao.user import UserDAO
+from trudex.infrastructure.database.repo.user import UserRepository
+from trudex.infrastructure.utils.bot_commands import setup_bot_commands
+from trudex.infrastructure.utils.config import Config
 
 
 @inject
 async def get_users_data(user_dao: FromDishka[UserDAO], **_kwargs):
     users = await user_dao.get_all()
+    users_sorted = sorted(users, key=lambda u: u.created_at, reverse=True)
     
     return {
         "users": [
-            (f"{u.name or u.first_name} (@{u.username or 'нет'})", u.id)
-            for u in users
+            (f"{'👑 ' if u.is_admin else ''}{u.name or u.first_name} (@{u.username or 'нет'})", u.id)
+            for u in users_sorted
         ],
-        "count": len(users),
+        "count": len(users_sorted),
     }
 
 
@@ -54,6 +61,7 @@ async def get_user_detail_data(dialog_manager: DialogManager, user_dao: FromDish
         "user_info": user_info,
         "is_admin": user.is_admin,
         "show_make_admin": not user.is_admin,
+        "show_remove_admin": user.is_admin,
     }
 
 
@@ -107,15 +115,49 @@ async def on_make_admin_clicked(_callback: CallbackQuery, _button: Button, manag
     await manager.switch_to(CreatorUsersSG.make_admin_confirm)
 
 
+async def on_remove_admin_clicked(_callback: CallbackQuery, _button: Button, manager: DialogManager):
+    await manager.switch_to(CreatorUsersSG.remove_admin_confirm)
+
+
 @inject
-async def on_confirm_yes(_callback: CallbackQuery, _button: Button, manager: DialogManager, user_dao: FromDishka[UserDAO]):
+async def on_confirm_yes(
+    _callback: CallbackQuery,
+    _button: Button,
+    manager: DialogManager,
+    user_dao: FromDishka[UserDAO],
+    user_repo: FromDishka[UserRepository],
+    bot: FromDishka[Bot],
+    config: FromDishka[Config],
+):
     user_id = manager.dialog_data.get("selected_user_id")
     if not user_id:
         await _callback.answer("Ошибка: пользователь не выбран")
         return
     
     await user_dao.update(user_id=user_id, is_admin=True)
+    asyncio.create_task(setup_bot_commands(bot, config, user_repo))
     await _callback.answer("✅ Пользователь назначен администратором")
+    await manager.switch_to(CreatorUsersSG.user_detail)
+
+
+@inject
+async def on_remove_admin_confirm_yes(
+    _callback: CallbackQuery,
+    _button: Button,
+    manager: DialogManager,
+    user_dao: FromDishka[UserDAO],
+    user_repo: FromDishka[UserRepository],
+    bot: FromDishka[Bot],
+    config: FromDishka[Config],
+):
+    user_id = manager.dialog_data.get("selected_user_id")
+    if not user_id:
+        await _callback.answer("Ошибка: пользователь не выбран")
+        return
+    
+    await user_dao.update(user_id=user_id, is_admin=False)
+    asyncio.create_task(setup_bot_commands(bot, config, user_repo))
+    await _callback.answer("✅ Пользователь снят с должности администратора")
     await manager.switch_to(CreatorUsersSG.user_detail)
 
 
@@ -160,6 +202,7 @@ users_dialog = Dialog(
         Format("{user_info}"),
         Column(
             Button(Const("👑 Сделать администратором"), id="make_admin", on_click=on_make_admin_clicked, when="show_make_admin"),
+            Button(Const("🚫 Снять администратора"), id="remove_admin", on_click=on_remove_admin_clicked, when="show_remove_admin"),
             SwitchTo(Const("◀️ Назад"), id="back_to_list", state=CreatorUsersSG.users_list),
         ),
         state=CreatorUsersSG.user_detail,
@@ -173,6 +216,16 @@ users_dialog = Dialog(
             Button(Const("❌ Нет"), id="confirm_no", on_click=on_confirm_no),
         ),
         state=CreatorUsersSG.make_admin_confirm,
+        getter=get_confirm_data,
+    ),
+    Window(
+        Const("<b>⚠️ Подтверждение</b>\n\nВы уверены, что хотите снять этого пользователя с должности администратора?\n\n"),
+        Format("{user_info}"),
+        Row(
+            Button(Const("✅ Да"), id="confirm_yes", on_click=on_remove_admin_confirm_yes),
+            Button(Const("❌ Нет"), id="confirm_no", on_click=on_confirm_no),
+        ),
+        state=CreatorUsersSG.remove_admin_confirm,
         getter=get_confirm_data,
     ),
 )
