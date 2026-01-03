@@ -349,6 +349,9 @@ async def on_import_file(
     result = parser.parse(json_str)
     
     if isinstance(result, list):
+        if not result:
+            await message.answer("❌ Неизвестная ошибка валидации")
+            return
         error_lines = ["❌ <b>Ошибки валидации:</b>\n"]
         for err in result[:10]:
             path_str = f" (<code>{err.path}</code>)" if err.path else ""

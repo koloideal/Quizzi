@@ -80,7 +80,8 @@ class TestParser:
         max_length: int | None = None,
         errors: list[ParseError] | None = None,
     ) -> str | None:
-        errors = errors or []
+        if errors is None:
+            errors = []
         value = data.get(key)
         
         if value is None:
@@ -112,7 +113,8 @@ class TestParser:
         max_val: int | None = None,
         errors: list[ParseError] | None = None,
     ) -> int | None:
-        errors = errors or []
+        if errors is None:
+            errors = []
         value = data.get(key)
         
         if value is None:
@@ -141,7 +143,8 @@ class TestParser:
         required: bool,
         errors: list[ParseError] | None = None,
     ) -> datetime | None:
-        errors = errors or []
+        if errors is None:
+            errors = []
         value = data.get(key)
         
         if value is None:
