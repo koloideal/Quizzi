@@ -16,7 +16,7 @@ from trudex.infrastructure.database.dao.option import OptionDAO
 from trudex.infrastructure.database.dao.question import QuestionDAO
 from trudex.infrastructure.database.dao.test import TestDAO
 from trudex.infrastructure.database.repo.test import TestRepository
-from trudex.infrastructure.utils.timezone import MSK_TZ, to_msk
+from trudex.infrastructure.utils.timezone import to_msk
 
 
 async def on_title_input(message: Message, _widget: MessageInput, manager: DialogManager):
@@ -111,7 +111,7 @@ async def on_skip_attempts(_callback: CallbackQuery, _button: Button, manager: D
 
 
 async def on_date_selected(_callback, _widget, manager: DialogManager, selected_date: date):
-    manager.dialog_data["expires_at"] = datetime.combine(selected_date, time.min, tzinfo=MSK_TZ)
+    manager.dialog_data["expires_at"] = datetime.combine(selected_date, time.min)
     await manager.switch_to(CreateTestSG.input_for_group)
 
 
@@ -537,7 +537,7 @@ create_test_dialog = Dialog(
         getter=get_question_type_data,
     ),
     Window(
-        Const("<b>✏️ Правильный ответ</b>\n\n💬 <b>Введите правильный ответ</b> (для проверки будет использоваться точное совпадение):\n<i>(максимум 255 символов)</i>"),
+        Const("<b>✏️ Правильный ответ</b>\n\n💬 <b>Введите правильный ответ</b> (регистр и пробелы игнорируются):\n<i>(максимум 255 символов)</i>"),
         MessageInput(on_correct_answer_input),
         Button(Const("◀️ Назад"), id="back", on_click=on_cancel_question),
         state=CreateTestSG.input_correct_answer,

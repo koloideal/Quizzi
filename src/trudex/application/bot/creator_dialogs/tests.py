@@ -25,7 +25,7 @@ from trudex.infrastructure.database.repo.test_attempt import TestAttemptReposito
 from trudex.infrastructure.utils.config import Config
 from trudex.infrastructure.utils.qr_generator import generate_qr_bytes
 from trudex.infrastructure.utils.test_id_to_hash import encode_id
-from trudex.infrastructure.utils.timezone import MSK_TZ, to_msk
+from trudex.infrastructure.utils.timezone import to_msk
 
 
 @inject
@@ -383,7 +383,7 @@ async def on_date_selected_for_test(_callback, _widget, manager: DialogManager, 
         await _callback.answer("❌ Тест не найден")
         return
     
-    expires_at = datetime.combine(selected_date, time.min, tzinfo=MSK_TZ)
+    expires_at = datetime.combine(selected_date, time.min)
     await test_dao.update(test_id, expires_at=expires_at)
     await _callback.answer("✅ Срок действия обновлен")
     await manager.switch_to(CreatorTestsSG.test_detail)

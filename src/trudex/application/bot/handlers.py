@@ -17,7 +17,7 @@ from trudex.infrastructure.database.dao.test import TestDAO
 from trudex.infrastructure.database.dao.user import UserDAO
 from trudex.infrastructure.utils.config import Config
 from trudex.infrastructure.utils.test_id_to_hash import decode_id
-from trudex.infrastructure.utils.timezone import now_msk
+from trudex.infrastructure.utils.timezone import now_msk_naive
 
 router = Router()
 
@@ -92,7 +92,7 @@ async def validate_deeplink_test(
     if not test.is_active:
         return False, "❌ Тест деактивирован"
     
-    if test.expires_at and test.expires_at < now_msk():
+    if test.expires_at and test.expires_at < now_msk_naive():
         return False, "❌ Срок действия теста истек"
     
     user = await user_dao.get_by_id(user_id)

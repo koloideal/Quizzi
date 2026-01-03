@@ -20,7 +20,7 @@ from trudex.infrastructure.database.repo.test_attempt import TestAttemptReposito
 from trudex.infrastructure.utils.config import Config
 from trudex.infrastructure.utils.qr_generator import generate_qr_bytes
 from trudex.infrastructure.utils.test_id_to_hash import encode_id
-from trudex.infrastructure.utils.timezone import now_msk, to_msk
+from trudex.infrastructure.utils.timezone import now_msk, now_msk_naive, to_msk
 from datetime import datetime
 
 
@@ -150,7 +150,7 @@ async def on_name_input(
     result = await user_dao.update(
         user_id=message.from_user.id,
         name=name,
-        name_updated_at=now_msk(),
+        name_updated_at=now_msk_naive(),
     )
     if result:
         await message.answer("✅ Имя обновлено")
@@ -177,7 +177,7 @@ async def on_group_selected(
     result = await user_dao.update(
         user_id=_callback.from_user.id,
         group=int(item_id),
-        group_updated_at=now_msk(),
+        group_updated_at=now_msk_naive(),
     )
     if result:
         await _callback.answer("✅ Группа обновлена")

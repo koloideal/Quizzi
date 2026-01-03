@@ -12,7 +12,7 @@ from trudex.infrastructure.database.dao.user_answer import UserAnswerDAO
 from trudex.infrastructure.database.models import QuestionType
 from trudex.infrastructure.database.repo.test import TestRepository
 from trudex.infrastructure.database.repo.test_attempt import TestAttemptRepository
-from trudex.infrastructure.utils.timezone import now_msk
+from trudex.infrastructure.utils.timezone import now_msk_naive
 
 
 async def get_state_for_question_type(question_type: str):
@@ -50,7 +50,7 @@ async def on_start_test(
         await _callback.answer("❌ Тест деактивирован")
         return
     
-    if test.expires_at and test.expires_at < now_msk():
+    if test.expires_at and test.expires_at < now_msk_naive():
         await _callback.answer("❌ Срок действия теста истек")
         return
     
