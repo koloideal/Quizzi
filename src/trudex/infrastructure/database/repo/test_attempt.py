@@ -211,3 +211,16 @@ class TestAttemptRepository:
             "total_attempts": row.total_attempts or 0,
             "avg_score": round(row.avg_score, 1) if row.avg_score else 0,
         }
+
+    async def get_finished_attempts_with_tests(self, user_id: int) -> list[tuple[TestAttempt, str]]:
+        from trudex.infrastructure.database.models import Test as TestModel
+        
+        result = await self.session.execute(
+            select(TestAttemptModel, TestModel.title)
+            .join(TestModel, TestAttemptModel.test_id == TestModel.id)
+            .where(TestAttemptModel.user_id == user_id)
+            .where(TestAttemptModel.finished_at.isnot(None))
+            .order_by(TestAttemptModel.finished_at.desc())
+        )
+        rows = result.all()
+        return [(TestAttemptDTO(row[0]).to_domain(), row[1]) for row in rows]

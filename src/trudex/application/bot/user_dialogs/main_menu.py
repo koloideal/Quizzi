@@ -107,8 +107,8 @@ async def on_tests_clicked(_callback: CallbackQuery, _button: Button, manager: D
     await manager.switch_to(UserMenuSG.available_tests)
 
 
-async def on_results_clicked(_callback: CallbackQuery, _button: Button, _manager: DialogManager):
-    await _callback.answer("🚧 В разработке")
+async def on_results_clicked(_callback: CallbackQuery, _button: Button, manager: DialogManager):
+    await manager.switch_to(UserMenuSG.my_results)
 
 
 async def on_back_to_main(_callback: CallbackQuery, _button: Button, manager: DialogManager):
@@ -222,6 +222,89 @@ async def get_test_detail(
     return {"test_info": test_info}
 
 
+@inject
+async def get_my_results(
+    dialog_manager: DialogManager,
+    attempt_repo: FromDishka[TestAttemptRepository],
+    **_kwargs
+):
+    user_id = dialog_manager.event.from_user.id
+    attempts_with_tests = await attempt_repo.get_finished_attempts_with_tests(user_id)
+    
+    results = []
+    for attempt, test_title in attempts_with_tests:
+        status = "✅" if attempt.is_passed else "❌"
+        date_str = attempt.finished_at.strftime("%d.%m.%Y") if attempt.finished_at else ""
+        results.append((f"{status} {test_title} — {attempt.score}% ({date_str})", attempt.id))
+    
+    return {
+        "results": results,
+        "count": len(results),
+    }
+
+
+async def on_result_selected(_callback: CallbackQuery, _widget: Select, manager: DialogManager, item_id: str):
+    manager.dialog_data["selected_attempt_id"] = int(item_id)
+    await manager.switch_to(UserMenuSG.result_detail)
+
+
+async def on_back_to_results(_callback: CallbackQuery, _button: Button, manager: DialogManager):
+    await manager.switch_to(UserMenuSG.my_results)
+
+
+@inject
+async def get_result_detail(
+    dialog_manager: DialogManager,
+    attempt_repo: FromDishka[TestAttemptRepository],
+    test_repo: FromDishka[TestRepository],
+    **_kwargs
+):
+    attempt_id = dialog_manager.dialog_data.get("selected_attempt_id")
+    
+    if not attempt_id:
+        return {"result_info": "❌ Результат не найден"}
+    
+    attempt, answers = await attempt_repo.get_attempt_with_answers(attempt_id)
+    
+    if not attempt:
+        return {"result_info": "❌ Результат не найден"}
+    
+    test, _ = await test_repo.get_test_with_questions(attempt.test_id)
+    test_title = test.title if test else "Неизвестный тест"
+    
+    status = "✅ Пройден" if attempt.is_passed else "❌ Не пройден"
+    date_str = attempt.finished_at.strftime("%d.%m.%Y %H:%M") if attempt.finished_at else "—"
+    
+    lines = [
+        f"<b>📝 {test_title}</b>\n",
+        f"📊 <b>Результат:</b> {attempt.score}%",
+        f"📅 <b>Дата:</b> {date_str}",
+        f"🏆 <b>Статус:</b> {status}\n",
+        "<b>📋 Ответы:</b>\n",
+    ]
+    
+    for i, answer in enumerate(answers, 1):
+        question, options = await test_repo.get_question_with_options(answer.question_id)
+        if not question:
+            continue
+        
+        correct_options = [opt for opt in options if opt.is_correct]
+        correct_texts = [opt.text for opt in correct_options]
+        
+        status_icon = "✅" if answer.is_correct else "❌"
+        
+        user_answer = answer.text_answer or ""
+        if "|" in user_answer:
+            user_answer = ", ".join(user_answer.split("|"))
+        
+        lines.append(f"{status_icon} <b>Вопрос {i}</b>")
+        lines.append(f"<blockquote>{question.text}</blockquote>")
+        lines.append(f"👤 <i>Ваш ответ:</i> {user_answer or '—'}")
+        lines.append(f"✓ <i>Правильно:</i> {', '.join(correct_texts)}\n")
+    
+    return {"result_info": "\n".join(lines)}
+
+
 user_menu_dialog = Dialog(
     Window(
         Format("{user_info}"),
@@ -286,5 +369,29 @@ user_menu_dialog = Dialog(
         Button(Const("◀️ Назад"), id="back", on_click=on_back_to_main),
         state=UserMenuSG.edit_group,
         getter=get_groups_data,
+    ),
+    Window(
+        Format("<b>📊 Мои результаты</b>\n\nВсего: {count}"),
+        ScrollingGroup(
+            Select(
+                Format("{item[0]}"),
+                id="result_select",
+                item_id_getter=lambda x: x[1],
+                items="results",
+                on_click=on_result_selected,
+            ),
+            id="results_scroll",
+            width=1,
+            height=7,
+        ),
+        Button(Const("◀️ Назад"), id="back", on_click=on_back_to_main),
+        state=UserMenuSG.my_results,
+        getter=get_my_results,
+    ),
+    Window(
+        Format("{result_info}"),
+        Button(Const("◀️ Назад"), id="back", on_click=on_back_to_results),
+        state=UserMenuSG.result_detail,
+        getter=get_result_detail,
     ),
 )

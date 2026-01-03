@@ -7,6 +7,8 @@ class UserMenuSG(StatesGroup):
     test_detail = State()
     edit_name = State()
     edit_group = State()
+    my_results = State()
+    result_detail = State()
 
 
 class UserTestSG(StatesGroup):
