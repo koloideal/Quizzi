@@ -21,7 +21,7 @@ class TestDAO:
     
     async def get_all(self) -> list[DomainTest]:
         result = await self.session.execute(
-            select(Test).order_by(Test.id)
+            select(Test).order_by(Test.created_at.desc())
         )
         models = list(result.scalars().all())
         return [TestDTO(model).to_domain() for model in models]
@@ -35,6 +35,7 @@ class TestDAO:
         expires_at: datetime | None = None,
         attempts: int | None = None,
         is_active: bool = True,
+        are_results_viewable: bool = False,
     ) -> DomainTest:
         test = Test(
             title=title,
@@ -44,6 +45,7 @@ class TestDAO:
             expires_at=expires_at,
             attempts=attempts,
             is_active=is_active,
+            are_results_viewable=are_results_viewable,
         )
         self.session.add(test)
         await self.session.flush()
@@ -60,6 +62,7 @@ class TestDAO:
         expires_at: datetime | None = None,
         attempts: int | None = None,
         is_active: bool | None = None,
+        are_results_viewable: bool | None = None,
     ) -> DomainTest | None:
         result = await self.session.execute(
             select(Test).where(Test.id == test_id)
@@ -82,6 +85,8 @@ class TestDAO:
             test.attempts = attempts
         if is_active is not None:
             test.is_active = is_active
+        if are_results_viewable is not None:
+            test.are_results_viewable = are_results_viewable
         
         await self.session.flush()
         await self.session.refresh(test)

@@ -55,6 +55,7 @@ async def get_test_detail(test_dao: FromDishka[TestDAO], test_repo: FromDishka[T
             "test_info": "Тест не найден",
             "is_active": False,
             "button_text": "◀️ Назад",
+            "results_button_text": "👁 Показать результаты",
         }
     
     test = await test_dao.get_by_id(test_id)
@@ -65,6 +66,7 @@ async def get_test_detail(test_dao: FromDishka[TestDAO], test_repo: FromDishka[T
             "test_info": "Тест не найден",
             "is_active": False,
             "button_text": "◀️ Назад",
+            "results_button_text": "👁 Показать результаты",
         }
     
     status = "🟢 Активен" if test.is_active else "🔴 Деактивирован"
@@ -72,6 +74,7 @@ async def get_test_detail(test_dao: FromDishka[TestDAO], test_repo: FromDishka[T
     attempts_str = f"🔄 {test.attempts}" if test.attempts else "♾️ Без ограничений"
     expires_str = f"📅 {to_msk(test.expires_at).strftime('%d.%m.%Y %H:%M')}" if test.expires_at else "📅 Без срока"
     group_str = f"🎓 Группа {test.for_group}" if test.for_group else "👥 Для всех"
+    results_str = "👁 Результаты видны" if test.are_results_viewable else "🔒 Результаты скрыты"
     
     test_info = (
         f"<b>📝 Информация о тесте</b>\n\n"
@@ -82,16 +85,19 @@ async def get_test_detail(test_dao: FromDishka[TestDAO], test_repo: FromDishka[T
         f"<b>Пароль:</b> {password_str}\n"
         f"<b>Попытки:</b> {attempts_str}\n"
         f"<b>Срок:</b> {expires_str}\n"
-        f"<b>Группа:</b> {group_str}\n\n"
+        f"<b>Группа:</b> {group_str}\n"
+        f"<b>Видимость:</b> {results_str}\n\n"
         f"<b>Создан:</b> {to_msk(test.created_at).strftime('%d.%m.%Y %H:%M') if test.created_at else '—'}"
     )
     
     button_text = "🔴 Деактивировать" if test.is_active else "🟢 Активировать"
+    results_button_text = "🔒 Скрыть результаты" if test.are_results_viewable else "👁 Показать результаты"
     
     return {
         "test_info": test_info,
         "is_active": test.is_active,
         "button_text": button_text,
+        "results_button_text": results_button_text,
     }
 
 
@@ -108,6 +114,22 @@ async def on_toggle_active(_callback: CallbackQuery, _button: Button, manager: D
         await test_dao.update(test_id, is_active=not test.is_active)
         action = "деактивирован" if test.is_active else "активирован"
         await _callback.answer(f"✅ Тест {action}")
+        await manager.switch_to(CreatorTestsSG.test_detail)
+
+
+@inject
+async def on_toggle_results_viewable(_callback: CallbackQuery, _button: Button, manager: DialogManager, test_dao: FromDishka[TestDAO]):
+    test_id = manager.dialog_data.get("selected_test_id")
+    if not test_id:
+        await _callback.answer("❌ Тест не найден")
+        return
+    
+    test = await test_dao.get_by_id(test_id)
+    
+    if test:
+        await test_dao.update(test_id, are_results_viewable=not test.are_results_viewable)
+        action = "скрыты" if test.are_results_viewable else "видны"
+        await _callback.answer(f"✅ Результаты теперь {action}")
         await manager.switch_to(CreatorTestsSG.test_detail)
 
 
@@ -438,6 +460,11 @@ tests_dialog = Dialog(
                 Format("{button_text}"),
                 id="toggle_active",
                 on_click=on_toggle_active
+            ),
+            Button(
+                Format("{results_button_text}"),
+                id="toggle_results",
+                on_click=on_toggle_results_viewable
             ),
             Button(Const("📊 Статистика"), id="statistics", on_click=on_statistics),
             Button(Const("🔗 Поделиться"), id="share", on_click=on_share_test),

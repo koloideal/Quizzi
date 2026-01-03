@@ -35,6 +35,7 @@ class Test:
     expires_at: datetime | None = None
     attempts: int | None = None
     is_active: bool = True
+    are_results_viewable: bool = False
     created_at: datetime | None = None
     updated_at: datetime | None = None
 

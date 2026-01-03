@@ -63,6 +63,7 @@ class Test(Base):
     expires_at: Mapped[datetime | None] = mapped_column(default=None)
     attempts: Mapped[int | None] = mapped_column(Integer, default=None)
     is_active: Mapped[bool] = mapped_column(default=True)
+    are_results_viewable: Mapped[bool] = mapped_column(default=False)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now())
 

@@ -234,6 +234,7 @@ async def on_text_answer_input(
     test_repo: FromDishka[TestRepository],
     attempt_repo: FromDishka[TestAttemptRepository],
     answer_dao: FromDishka[UserAnswerDAO],
+    test_dao: FromDishka[TestDAO],
 ):
     start_data = manager.start_data or {}
     assert isinstance(start_data, dict)
@@ -248,6 +249,7 @@ async def on_text_answer_input(
     question_id = questions[current_index]
     text_answer = message.text.strip() if message.text else ""
     attempt_id = manager.dialog_data.get("attempt_id") or start_data.get("attempt_id")
+    test_id = manager.dialog_data.get("test_id") or start_data.get("test_id")
     
     if not attempt_id:
         await message.answer("❌ Ошибка попытки")
@@ -270,7 +272,9 @@ async def on_text_answer_input(
     )
     
     if current_index + 1 >= len(questions):
-        await finish_test(manager, attempt_repo, attempt_id, len(questions))
+        test = await test_dao.get_by_id(test_id) if test_id else None
+        are_results_viewable = test.are_results_viewable if test else False
+        await finish_test(manager, attempt_repo, attempt_id, len(questions), are_results_viewable)
     else:
         next_index = current_index + 1
         manager.dialog_data["current_question_index"] = next_index
@@ -290,6 +294,7 @@ async def on_next_question(
     test_repo: FromDishka[TestRepository],
     attempt_repo: FromDishka[TestAttemptRepository],
     answer_dao: FromDishka[UserAnswerDAO],
+    test_dao: FromDishka[TestDAO],
 ):
     start_data = manager.start_data or {}
     assert isinstance(start_data, dict)
@@ -311,6 +316,7 @@ async def on_next_question(
     
     answer_data = user_answers[str(question_id)]
     attempt_id = manager.dialog_data.get("attempt_id") or start_data.get("attempt_id")
+    test_id = manager.dialog_data.get("test_id") or start_data.get("test_id")
     
     if not attempt_id:
         await _callback.answer("❌ Ошибка попытки")
@@ -352,7 +358,9 @@ async def on_next_question(
         )
     
     if current_index + 1 >= len(questions):
-        await finish_test(manager, attempt_repo, attempt_id, len(questions))
+        test = await test_dao.get_by_id(test_id) if test_id else None
+        are_results_viewable = test.are_results_viewable if test else False
+        await finish_test(manager, attempt_repo, attempt_id, len(questions), are_results_viewable)
     else:
         next_index = current_index + 1
         manager.dialog_data["current_question_index"] = next_index
@@ -364,7 +372,13 @@ async def on_next_question(
         await manager.switch_to(next_state)
 
 
-async def finish_test(manager: DialogManager, attempt_repo: TestAttemptRepository, attempt_id: int, total_questions: int):
+async def finish_test(
+    manager: DialogManager,
+    attempt_repo: TestAttemptRepository,
+    attempt_id: int,
+    total_questions: int,
+    are_results_viewable: bool = False,
+):
     correct_count = await attempt_repo.calculate_attempt_score(attempt_id)
     
     score = round((correct_count / total_questions * 100)) if total_questions > 0 else 0
@@ -376,6 +390,7 @@ async def finish_test(manager: DialogManager, attempt_repo: TestAttemptRepositor
     manager.dialog_data["correct_count"] = correct_count
     manager.dialog_data["total_questions"] = total_questions
     manager.dialog_data["is_passed"] = is_passed
+    manager.dialog_data["are_results_viewable"] = are_results_viewable
     
     await manager.switch_to(UserTestSG.results)
 
@@ -385,6 +400,7 @@ async def get_results_data(dialog_manager: DialogManager, **_kwargs):
     correct_count = dialog_manager.dialog_data.get("correct_count", 0)
     total_questions = dialog_manager.dialog_data.get("total_questions", 0)
     is_passed = dialog_manager.dialog_data.get("is_passed", False)
+    are_results_viewable = dialog_manager.dialog_data.get("are_results_viewable", False)
     
     if is_passed:
         status = "✅ <b>Тест пройден!</b>"
@@ -397,7 +413,7 @@ async def get_results_data(dialog_manager: DialogManager, **_kwargs):
         f"✏️ <b>Правильных ответов:</b> {correct_count} из {total_questions}"
     )
     
-    return {"results_text": results_text}
+    return {"results_text": results_text, "are_results_viewable": are_results_viewable}
 
 
 async def on_back_to_menu(_callback: CallbackQuery, _button: Button, manager: DialogManager):
@@ -471,10 +487,7 @@ take_test_dialog = Dialog(
                 on_click=on_single_answer_selected,
             ),
         ),
-        Column(
-            Button(Const("➡️ Далее"), id="next", on_click=on_next_question),
-            Button(Const("❌ Отмена"), id="cancel", on_click=on_cancel_test),
-        ),
+        Button(Const("➡️ Далее"), id="next", on_click=on_next_question),
         state=UserTestSG.question_single,
         getter=get_question_data,
     ),
@@ -490,24 +503,25 @@ take_test_dialog = Dialog(
                 on_state_changed=on_multiple_answer_changed,
             ),
         ),
-        Column(
-            Button(Const("➡️ Далее"), id="next", on_click=on_next_question),
-            Button(Const("❌ Отмена"), id="cancel", on_click=on_cancel_test),
-        ),
+        Button(Const("➡️ Далее"), id="next", on_click=on_next_question),
         state=UserTestSG.question_multiple,
         getter=get_question_data,
     ),
     Window(
         Format("{question_text}\n\n<i>Введите ответ:</i>"),
         MessageInput(on_text_answer_input),
-        Button(Const("❌ Отмена"), id="cancel", on_click=on_cancel_test),
         state=UserTestSG.question_input,
         getter=get_question_data,
     ),
     Window(
         Format("{results_text}"),
         Column(
-            Button(Const("📋 Подробные результаты"), id="detailed", on_click=on_show_detailed_results),
+            Button(
+                Const("📋 Подробные результаты"),
+                id="detailed",
+                on_click=on_show_detailed_results,
+                when="are_results_viewable",
+            ),
             Button(Const("◀️ В главное меню"), id="back", on_click=on_back_to_menu),
         ),
         state=UserTestSG.results,

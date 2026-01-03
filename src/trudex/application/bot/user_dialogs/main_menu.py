@@ -348,37 +348,46 @@ async def get_result_detail(
     
     test, _ = await test_repo.get_test_with_questions(attempt.test_id)
     test_title = test.title if test else "Неизвестный тест"
+    are_results_viewable = test.are_results_viewable if test else False
     
     status = "✅ Пройден" if attempt.is_passed else "❌ Не пройден"
     finished_at_msk = to_msk(attempt.finished_at)
     date_str = finished_at_msk.strftime("%d.%m.%Y %H:%M") if finished_at_msk else "—"
     
+    correct_count = sum(1 for a in answers if a.is_correct)
+    total_count = len(answers)
+    
     lines = [
         f"<b>📝 {test_title}</b>\n",
         f"📊 <b>Результат:</b> {attempt.score}%",
+        f"✏️ <b>Правильных ответов:</b> {correct_count} из {total_count}",
         f"📅 <b>Дата:</b> {date_str}",
-        f"🏆 <b>Статус:</b> {status}\n",
-        "<b>📋 Ответы:</b>\n",
+        f"🏆 <b>Статус:</b> {status}",
     ]
     
-    for i, answer in enumerate(answers, 1):
-        question, options = await test_repo.get_question_with_options(answer.question_id)
-        if not question:
-            continue
+    if are_results_viewable:
+        lines.append("\n<b>📋 Ответы:</b>\n")
         
-        correct_options = [opt for opt in options if opt.is_correct]
-        correct_texts = [opt.text for opt in correct_options]
-        
-        status_icon = "✅" if answer.is_correct else "❌"
-        
-        user_answer = answer.text_answer or ""
-        if "|" in user_answer:
-            user_answer = ", ".join(user_answer.split("|"))
-        
-        lines.append(f"{status_icon} <b>Вопрос {i}</b>")
-        lines.append(f"<blockquote>{question.text}</blockquote>")
-        lines.append(f"👤 <i>Ваш ответ:</i> {user_answer or '—'}")
-        lines.append(f"✓ <i>Правильно:</i> {', '.join(correct_texts)}\n")
+        for i, answer in enumerate(answers, 1):
+            question, options = await test_repo.get_question_with_options(answer.question_id)
+            if not question:
+                continue
+            
+            correct_options = [opt for opt in options if opt.is_correct]
+            correct_texts = [opt.text for opt in correct_options]
+            
+            status_icon = "✅" if answer.is_correct else "❌"
+            
+            user_answer = answer.text_answer or ""
+            if "|" in user_answer:
+                user_answer = ", ".join(user_answer.split("|"))
+            
+            lines.append(f"{status_icon} <b>Вопрос {i}</b>")
+            lines.append(f"<blockquote>{question.text}</blockquote>")
+            lines.append(f"👤 <i>Ваш ответ:</i> {user_answer or '—'}")
+            lines.append(f"✓ <i>Правильно:</i> {', '.join(correct_texts)}\n")
+    else:
+        lines.append("\n<i>🔒 Подробные результаты скрыты</i>")
     
     return {"result_info": "\n".join(lines)}
 

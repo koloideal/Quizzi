@@ -16,6 +16,7 @@ class TestDTO:
             expires_at=self.model.expires_at,
             attempts=self.model.attempts,
             is_active=self.model.is_active,
+            are_results_viewable=self.model.are_results_viewable,
             created_at=self.model.created_at,
             updated_at=self.model.updated_at,
         )
