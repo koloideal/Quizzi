@@ -20,6 +20,8 @@ class AdminTestsSG(StatesGroup):
     edit_attempts = State()
     edit_group = State()
     edit_expires = State()
+    statistics = State()
+    attempt_detail = State()
 
 
 class AdminBroadcastSG(StatesGroup):

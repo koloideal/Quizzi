@@ -46,10 +46,7 @@ async def get_groups_for_registration(dialog_manager: DialogManager, group_dao: 
 @inject
 async def on_group_selected(_callback: CallbackQuery, _widget, manager: DialogManager, item_id: str, user_dao: FromDishka[UserDAO]):
     user_id = manager.start_data.get("user_id")
-    
     await user_dao.update(user_id=user_id, group=int(item_id))
-    
-    await _callback.answer("✅ Группа выбрана! Вы можете изменить её через 24 часа", show_alert=True)
     await manager.start(UserMenuSG.main, mode=StartMode.RESET_STACK)
 
 

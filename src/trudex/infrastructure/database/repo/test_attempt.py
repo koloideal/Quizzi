@@ -224,3 +224,16 @@ class TestAttemptRepository:
         )
         rows = result.all()
         return [(TestAttemptDTO(row[0]).to_domain(), row[1]) for row in rows]
+
+    async def get_test_attempts_with_users(self, test_id: int) -> list[tuple[TestAttempt, str]]:
+        from trudex.infrastructure.database.models import User as UserModel
+        
+        result = await self.session.execute(
+            select(TestAttemptModel, UserModel.name, UserModel.first_name)
+            .join(UserModel, TestAttemptModel.user_id == UserModel.id)
+            .where(TestAttemptModel.test_id == test_id)
+            .where(TestAttemptModel.finished_at.isnot(None))
+            .order_by(TestAttemptModel.finished_at.desc())
+        )
+        rows = result.all()
+        return [(TestAttemptDTO(row[0]).to_domain(), row[1] or row[2]) for row in rows]

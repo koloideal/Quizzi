@@ -17,6 +17,7 @@ from trudex.application.bot.admin_dialogs.states import (AdminMenuSG,
 from trudex.infrastructure.database.dao.group import GroupDAO
 from trudex.infrastructure.database.dao.test import TestDAO
 from trudex.infrastructure.database.repo.test import TestRepository
+from trudex.infrastructure.database.repo.test_attempt import TestAttemptRepository
 from trudex.infrastructure.utils.config import Config
 from trudex.infrastructure.utils.qr_generator import generate_qr_bytes
 from trudex.infrastructure.utils.test_id_to_hash import encode_id
@@ -109,8 +110,92 @@ async def on_back_to_list(_callback: CallbackQuery, _button: Button, manager: Di
     await manager.switch_to(AdminTestsSG.tests_list)
 
 
-async def on_statistics(_callback: CallbackQuery, _button: Button, _manager: DialogManager):
-    await _callback.answer("🚧 В разработке")
+async def on_statistics(_callback: CallbackQuery, _button: Button, manager: DialogManager):
+    await manager.switch_to(AdminTestsSG.statistics)
+
+
+@inject
+async def get_statistics_data(
+    dialog_manager: DialogManager,
+    attempt_repo: FromDishka[TestAttemptRepository],
+    **_kwargs
+):
+    test_id = dialog_manager.dialog_data.get("selected_test_id")
+    
+    if not test_id:
+        return {"attempts": [], "count": 0}
+    
+    attempts_with_users = await attempt_repo.get_test_attempts_with_users(test_id)
+    
+    results = []
+    for attempt, user_name in attempts_with_users:
+        status = "✅" if attempt.is_passed else "❌"
+        date_str = attempt.finished_at.strftime("%d.%m.%Y %H:%M") if attempt.finished_at else ""
+        results.append((f"{status} {user_name} — {attempt.score}% ({date_str})", attempt.id))
+    
+    return {
+        "attempts": results,
+        "count": len(results),
+    }
+
+
+async def on_attempt_selected(_callback: CallbackQuery, _widget: Select, manager: DialogManager, item_id: str):
+    manager.dialog_data["selected_attempt_id"] = int(item_id)
+    await manager.switch_to(AdminTestsSG.attempt_detail)
+
+
+async def on_back_to_statistics(_callback: CallbackQuery, _button: Button, manager: DialogManager):
+    await manager.switch_to(AdminTestsSG.statistics)
+
+
+@inject
+async def get_attempt_detail(
+    dialog_manager: DialogManager,
+    attempt_repo: FromDishka[TestAttemptRepository],
+    test_repo: FromDishka[TestRepository],
+    **_kwargs
+):
+    attempt_id = dialog_manager.dialog_data.get("selected_attempt_id")
+    
+    if not attempt_id:
+        return {"attempt_info": "❌ Результат не найден"}
+    
+    attempt, answers = await attempt_repo.get_attempt_with_answers(attempt_id)
+    
+    if not attempt:
+        return {"attempt_info": "❌ Результат не найден"}
+    
+    status = "✅ Пройден" if attempt.is_passed else "❌ Не пройден"
+    date_str = attempt.finished_at.strftime("%d.%m.%Y %H:%M") if attempt.finished_at else "—"
+    
+    lines = [
+        f"<b>📊 Результат прохождения</b>\n",
+        f"📈 <b>Результат:</b> {attempt.score}%",
+        f"📅 <b>Дата:</b> {date_str}",
+        f"🏆 <b>Статус:</b> {status}\n",
+        "<b>📋 Ответы:</b>\n",
+    ]
+    
+    for i, answer in enumerate(answers, 1):
+        question, options = await test_repo.get_question_with_options(answer.question_id)
+        if not question:
+            continue
+        
+        correct_options = [opt for opt in options if opt.is_correct]
+        correct_texts = [opt.text for opt in correct_options]
+        
+        status_icon = "✅" if answer.is_correct else "❌"
+        
+        user_answer = answer.text_answer or ""
+        if "|" in user_answer:
+            user_answer = ", ".join(user_answer.split("|"))
+        
+        lines.append(f"{status_icon} <b>Вопрос {i}</b>")
+        lines.append(f"<blockquote>{question.text}</blockquote>")
+        lines.append(f"👤 <i>Ответ:</i> {user_answer or '—'}")
+        lines.append(f"✓ <i>Правильно:</i> {', '.join(correct_texts)}\n")
+    
+    return {"attempt_info": "\n".join(lines)}
 
 
 @inject
@@ -412,5 +497,32 @@ tests_dialog = Dialog(
             Button(Const("◀️ Назад"), id="back", on_click=on_back_to_edit_menu),
         ),
         state=AdminTestsSG.edit_expires,
+    ),
+    Window(
+        Format("<b>📊 Статистика теста</b>\n\nПрошли тест: {count}"),
+        ScrollingGroup(
+            Select(
+                Format("{item[0]}"),
+                id="attempt_select",
+                item_id_getter=lambda x: x[1],
+                items="attempts",
+                on_click=on_attempt_selected,
+            ),
+            id="attempts_scroll",
+            width=1,
+            height=7,
+        ),
+        Column(
+            Button(Const("🔄 Обновить"), id="refresh", on_click=on_statistics),
+            Button(Const("◀️ Назад"), id="back", on_click=on_back_to_detail),
+        ),
+        state=AdminTestsSG.statistics,
+        getter=get_statistics_data,
+    ),
+    Window(
+        Format("{attempt_info}"),
+        Button(Const("◀️ Назад"), id="back", on_click=on_back_to_statistics),
+        state=AdminTestsSG.attempt_detail,
+        getter=get_attempt_detail,
     ),
 )
