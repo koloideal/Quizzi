@@ -1,13 +1,18 @@
 import json
 
-from aiogram.types import BufferedInputFile, CallbackQuery
+from aiogram import Bot
+from aiogram.types import BufferedInputFile, CallbackQuery, ContentType, Message
 from aiogram_dialog import Dialog, DialogManager, StartMode, Window
+from aiogram_dialog.widgets.input import MessageInput
 from aiogram_dialog.widgets.kbd import Button, Row, ScrollingGroup, Select
 from aiogram_dialog.widgets.text import Const, Format
 from dishka import FromDishka
 from dishka.integrations.aiogram_dialog import inject
 
 from trudex.application.bot.admin_dialogs.states import AdminMenuSG, AdminTemplatesSG
+from trudex.domain.test_parser import ParsedTest, TestParser
+from trudex.infrastructure.database.dao.option import OptionDAO
+from trudex.infrastructure.database.dao.question import QuestionDAO
 from trudex.infrastructure.database.dao.test import TestDAO
 from trudex.infrastructure.database.repo.test import TestRepository
 
@@ -164,8 +169,8 @@ async def on_export_clicked(_callback: CallbackQuery, _button: Button, manager: 
     await manager.switch_to(AdminTemplatesSG.export_list)
 
 
-async def on_import_clicked(_callback: CallbackQuery, _button: Button, _manager: DialogManager) -> None:
-    await _callback.answer("🚧 В разработке", show_alert=True)
+async def on_import_clicked(_callback: CallbackQuery, _button: Button, manager: DialogManager) -> None:
+    await manager.switch_to(AdminTemplatesSG.import_file)
 
 
 async def on_spec_clicked(_callback: CallbackQuery, _button: Button, manager: DialogManager) -> None:
@@ -273,6 +278,98 @@ async def on_template_full(_callback: CallbackQuery, _button: Button, _manager: 
     await send_template(_callback, TEMPLATE_FULL, "full")
 
 
+async def create_test_from_parsed(
+    parsed: ParsedTest,
+    test_dao: TestDAO,
+    question_dao: QuestionDAO,
+    option_dao: OptionDAO,
+) -> int:
+    test = await test_dao.create(
+        title=parsed.title,
+        description=parsed.description,
+        password=parsed.password,
+        attempts=parsed.attempts,
+        expires_at=parsed.expires_at,
+        for_group=parsed.for_group,
+    )
+    
+    for position, q in enumerate(parsed.questions):
+        question = await question_dao.create(
+            test_id=test.id,
+            text=q.text,
+            position=position,
+            question_type=q.question_type,
+        )
+        
+        for opt in q.options:
+            await option_dao.create(
+                question_id=question.id,
+                text=opt.text,
+                is_correct=opt.is_correct,
+            )
+    
+    return test.id
+
+
+@inject
+async def on_import_file(
+    message: Message,
+    _widget: MessageInput,
+    manager: DialogManager,
+    bot_inst: FromDishka[Bot],
+    test_dao: FromDishka[TestDAO],
+    question_dao: FromDishka[QuestionDAO],
+    option_dao: FromDishka[OptionDAO],
+) -> None:
+    if not message.document:
+        await message.answer("❌ Отправьте JSON файл")
+        return
+    
+    if message.document.file_size and message.document.file_size > 1024 * 1024:
+        await message.answer("❌ Файл слишком большой (максимум 1 МБ)")
+        return
+    
+    file = await bot_inst.get_file(message.document.file_id)
+    if not file.file_path:
+        await message.answer("❌ Не удалось загрузить файл")
+        return
+    
+    file_bytes = await bot_inst.download_file(file.file_path)
+    if not file_bytes:
+        await message.answer("❌ Не удалось загрузить файл")
+        return
+    
+    try:
+        json_str = file_bytes.read().decode("utf-8")
+    except UnicodeDecodeError:
+        await message.answer("❌ Файл должен быть в кодировке UTF-8")
+        return
+    
+    parser = TestParser()
+    result = parser.parse(json_str)
+    
+    if isinstance(result, list):
+        error_lines = ["❌ <b>Ошибки валидации:</b>\n"]
+        for err in result[:10]:
+            path_str = f" (<code>{err.path}</code>)" if err.path else ""
+            error_lines.append(f"• {err.message}{path_str}")
+        if len(result) > 10:
+            error_lines.append(f"\n... и ещё {len(result) - 10} ошибок")
+        await message.answer("\n".join(error_lines))
+        return
+    
+    test_id = await create_test_from_parsed(result, test_dao, question_dao, option_dao)
+    
+    await message.answer(
+        f"✅ <b>Тест импортирован!</b>\n\n"
+        f"📝 <b>Название:</b> {result.title}\n"
+        f"❓ <b>Вопросов:</b> {len(result.questions)}\n\n"
+        f"Тест создан в деактивированном состоянии."
+    )
+    
+    await manager.switch_to(AdminTemplatesSG.main)
+
+
 templates_dialog = Dialog(
     Window(
         Const(TEMPLATES_INFO),
@@ -314,5 +411,11 @@ templates_dialog = Dialog(
         ),
         Button(Const("◀️ Назад"), id="back", on_click=on_back_to_templates),
         state=AdminTemplatesSG.spec,
+    ),
+    Window(
+        Const("<b>📥 Импорт теста</b>\n\nОтправьте JSON файл с тестом.\n\n<i>Формат файла описан в разделе «Спецификация»</i>"),
+        MessageInput(on_import_file, content_types=[ContentType.DOCUMENT]),
+        Button(Const("◀️ Назад"), id="back", on_click=on_back_to_templates),
+        state=AdminTemplatesSG.import_file,
     ),
 )

@@ -9,6 +9,7 @@ class AdminTemplatesSG(StatesGroup):
     main = State()
     export_list = State()
     spec = State()
+    import_file = State()
 
 
 class AdminUsersSG(StatesGroup):
