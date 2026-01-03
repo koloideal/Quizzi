@@ -147,7 +147,17 @@ async def get_share_data(dialog_manager: DialogManager, config: FromDishka[Confi
     
     return {
         "share_link": share_link,
-        "qr_media": BufferedInputFile(qr_bytes, filename="qr.png")
+    }
+
+
+async def qr_media_selector(data: dict, widget, manager: DialogManager):
+    """Селектор для получения QR-кода из dialog_data"""
+    qr_bytes = manager.dialog_data.get("qr_bytes")
+    if not qr_bytes:
+        return None
+    return {
+        "type": ContentType.PHOTO,
+        "media": BufferedInputFile(qr_bytes, filename="qr.png")
     }
 
 
@@ -399,8 +409,8 @@ tests_dialog = Dialog(
         state=AdminTestsSG.edit_expires,
     ),
     Window(
-        DynamicMedia("qr_media"),
         Format("<b>🔗 Поделиться тестом</b>\n\n📎 <b>Ссылка на тест:</b>\n<code>{share_link}</code>\n\n💡 Отправьте эту ссылку или QR-код пользователям для прохождения теста"),
+        DynamicMedia(selector=qr_media_selector),
         Button(Const("◀️ Назад"), id="back", on_click=on_back_to_list),
         state=AdminTestsSG.share_test,
         getter=get_share_data,

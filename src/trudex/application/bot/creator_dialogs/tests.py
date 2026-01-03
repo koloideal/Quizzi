@@ -4,8 +4,10 @@ from datetime import date, datetime
 import logging
 
 from aiogram import Bot
+from aiogram.enums import ContentType
 from aiogram.types import BufferedInputFile, CallbackQuery, Message
 from aiogram_dialog import Dialog, DialogManager, StartMode, Window
+from aiogram_dialog.api.entities import MediaAttachment
 from aiogram_dialog.widgets.input import MessageInput
 from aiogram_dialog.widgets.kbd import (Button, Calendar, Column, Row,
                                         ScrollingGroup, Select)
@@ -112,23 +114,9 @@ async def on_back_to_list(_callback: CallbackQuery, _button: Button, manager: Di
     await manager.switch_to(CreatorTestsSG.tests_list)
 
 
-async def on_share_test(_callback: CallbackQuery, _button: Button, manager: DialogManager):
-    await manager.switch_to(CreatorTestsSG.share_test)
-
-def debug_getter(func):
-    @functools.wraps(func)
-    async def wrapper(*args, **kwargs):
-        try:
-            return await func(*args, **kwargs)
-        except Exception as e:
-            logging.exception(f"CRASH in getter {func.__name__}: {e}")
-            raise e  # Пробрасываем ошибку дальше, чтобы диалог всё равно упал
-    return wrapper
-
-@debug_getter
 @inject
-async def get_share_data(dialog_manager: DialogManager, config: FromDishka[Config], bot_inst: FromDishka[Bot], **_kwargs):
-    test_id = dialog_manager.dialog_data.get("selected_test_id")
+async def on_share_test(_callback: CallbackQuery, _button: Button, manager: DialogManager, config: FromDishka[Config], bot_inst: FromDishka[Bot]):
+    test_id = manager.dialog_data.get("selected_test_id")
     
     if not test_id:
         return {
@@ -150,13 +138,13 @@ async def get_share_data(dialog_manager: DialogManager, config: FromDishka[Confi
         None,
         functools.partial(generate_qr_bytes, share_link)
     )
-    
-    dialog_manager.dialog_data["qr_bytes"] = qr_bytes
-    
-    return {
-        "share_link": share_link,
-        "qr_media": BufferedInputFile(qr_bytes, filename="qr.png")
-    }
+
+    assert _callback.message is not None
+
+    await _callback.message.answer_photo(
+        photo=BufferedInputFile(qr_bytes, filename="qr.png"),
+        caption=f"<b>🔗 Поделиться тестом</b>\n\n📎 <b>Ссылка на тест:</b>\n<code>{share_link}</code>\n\n💡 Отправьте эту ссылку или QR-код пользователям для прохождения теста"
+    )
 
 
 async def on_edit_password(_callback: CallbackQuery, _button: Button, manager: DialogManager):
@@ -405,13 +393,6 @@ tests_dialog = Dialog(
             Button(Const("◀️ Назад"), id="back", on_click=on_back_to_list),
         ),
         state=CreatorTestsSG.edit_expires,
-    ),
-    Window(
-        DynamicMedia("qr_media"),
-        Format("<b>🔗 Поделиться тестом</b>\n\n📎 <b>Ссылка на тест:</b>\n<code>{share_link}</code>\n\n💡 Отправьте эту ссылку или QR-код пользователям для прохождения теста"),
-        Button(Const("◀️ Назад"), id="back", on_click=on_back_to_list),
-        state=CreatorTestsSG.share_test,
-        getter=get_share_data,
-    ),
+    )
 )
 
