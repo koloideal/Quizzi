@@ -16,6 +16,7 @@ class CreatorTestsSG(StatesGroup):
     tests_list = State()
     test_detail = State()
     share_test = State()
+    edit_menu = State()
     edit_password = State()
     edit_attempts = State()
     edit_group = State()

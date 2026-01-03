@@ -69,19 +69,19 @@ async def get_test_detail(test_dao: FromDishka[TestDAO], test_repo: FromDishka[T
     status = "🟢 Активен" if test.is_active else "🔴 Деактивирован"
     password_str = f"🔒 {test.password}" if test.password else "🔓 Без пароля"
     attempts_str = f"🔄 {test.attempts}" if test.attempts else "♾️ Без ограничений"
-    expires_str = test.expires_at.strftime("%d.%m.%Y %H:%M") if test.expires_at else "♾️ Без срока"
+    expires_str = f"📅 {test.expires_at.strftime('%d.%m.%Y %H:%M')}" if test.expires_at else "📅 Без срока"
     group_str = f"🎓 Группа {test.for_group}" if test.for_group else "👥 Для всех"
     
     test_info = (
         f"<b>📝 Информация о тесте</b>\n\n"
-        f"<b>Название:</b> {test.title}\n"
-        f"<b>Описание:</b> {test.description or '—'}\n\n"
+        f"<b>Название:</b>\n<blockquote>{test.title}</blockquote>\n"
+        f"<b>Описание:</b>\n<blockquote>{test.description or '—'}</blockquote>\n\n"
         f"<b>Статус:</b> {status}\n"
         f"<b>Вопросов:</b> {questions_count}\n"
-        f"{password_str}\n"
-        f"<b>Попыток:</b> {attempts_str}\n"
-        f"{expires_str}\n"
-        f"{group_str}\n\n"
+        f"<b>Пароль:</b> {password_str}\n"
+        f"<b>Попытки:</b> {attempts_str}\n"
+        f"<b>Срок:</b> {expires_str}\n"
+        f"<b>Группа:</b> {group_str}\n\n"
         f"<b>Создан:</b> {test.created_at.strftime('%d.%m.%Y %H:%M') if test.created_at else '—'}"
     )
     
@@ -145,6 +145,18 @@ async def on_share_test(_callback: CallbackQuery, _button: Button, manager: Dial
         photo=BufferedInputFile(qr_bytes, filename="qr.png"),
         caption=f"<b>🔗 Поделиться тестом</b>\n\n📎 <b>Ссылка на тест:</b>\n<code>{share_link}</code>\n\n💡 Отправьте эту ссылку или QR-код пользователям для прохождения теста"
     )
+
+
+async def on_edit_menu(_callback: CallbackQuery, _button: Button, manager: DialogManager):
+    await manager.switch_to(CreatorTestsSG.edit_menu)
+
+
+async def on_back_to_detail(_callback: CallbackQuery, _button: Button, manager: DialogManager):
+    await manager.switch_to(CreatorTestsSG.test_detail)
+
+
+async def on_back_to_edit_menu(_callback: CallbackQuery, _button: Button, manager: DialogManager):
+    await manager.switch_to(CreatorTestsSG.edit_menu)
 
 
 async def on_edit_password(_callback: CallbackQuery, _button: Button, manager: DialogManager):
@@ -337,21 +349,29 @@ tests_dialog = Dialog(
                 on_click=on_toggle_active
             ),
             Button(Const("🔗 Поделиться"), id="share", on_click=on_share_test),
-            Button(Const("🔑 Изменить пароль"), id="edit_password", on_click=on_edit_password),
-            Button(Const("🔄 Изменить попытки"), id="edit_attempts", on_click=on_edit_attempts),
-            Button(Const("👥 Изменить группу"), id="edit_group", on_click=on_edit_group),
-            Button(Const("📅 Изменить срок"), id="edit_expires", on_click=on_edit_expires),
+            Button(Const("✏️ Изменить"), id="edit_menu", on_click=on_edit_menu),
             Button(Const("◀️ Назад"), id="back", on_click=on_back_to_list),
         ),
         state=CreatorTestsSG.test_detail,
         getter=get_test_detail,
     ),
     Window(
-        Const("<b>� Измеенение пароля</b>\n\n� <b>СВведите новый пароль</b> или удалите текущий:\n<i>(максимум 255 символов)</i>"),
+        Const("<b>✏️ Изменить тест</b>\n\nВыберите, что хотите изменить:"),
+        Column(
+            Button(Const("🔑 Пароль"), id="edit_password", on_click=on_edit_password),
+            Button(Const("🔄 Попытки"), id="edit_attempts", on_click=on_edit_attempts),
+            Button(Const("👥 Группа"), id="edit_group", on_click=on_edit_group),
+            Button(Const("📅 Срок действия"), id="edit_expires", on_click=on_edit_expires),
+            Button(Const("◀️ Назад"), id="back", on_click=on_back_to_detail),
+        ),
+        state=CreatorTestsSG.edit_menu,
+    ),
+    Window(
+        Const("<b>🔑 Изменение пароля</b>\n\n💬 <b>Введите новый пароль</b> или удалите текущий:\n<i>(максимум 255 символов)</i>"),
         MessageInput(on_password_input),
         Column(
             Button(Const("🗑 Удалить пароль"), id="remove_password", on_click=on_remove_password),
-            Button(Const("◀️ Назад"), id="back", on_click=on_back_to_list),
+            Button(Const("◀️ Назад"), id="back", on_click=on_back_to_edit_menu),
         ),
         state=CreatorTestsSG.edit_password,
     ),
@@ -360,7 +380,7 @@ tests_dialog = Dialog(
         MessageInput(on_attempts_input_edit),
         Column(
             Button(Const("🗑 Без ограничений"), id="remove_attempts", on_click=on_remove_attempts),
-            Button(Const("◀️ Назад"), id="back", on_click=on_back_to_list),
+            Button(Const("◀️ Назад"), id="back", on_click=on_back_to_edit_menu),
         ),
         state=CreatorTestsSG.edit_attempts,
     ),
@@ -380,7 +400,7 @@ tests_dialog = Dialog(
         ),
         Column(
             Button(Const("🗑 Для всех групп"), id="remove_group", on_click=on_remove_group),
-            Button(Const("◀️ Назад"), id="back", on_click=on_back_to_list),
+            Button(Const("◀️ Назад"), id="back", on_click=on_back_to_edit_menu),
         ),
         state=CreatorTestsSG.edit_group,
         getter=get_groups_for_edit,
@@ -390,7 +410,7 @@ tests_dialog = Dialog(
         Calendar(id="calendar", on_click=on_date_selected_for_test),
         Column(
             Button(Const("🗑 Удалить срок"), id="remove_expires", on_click=on_remove_expires),
-            Button(Const("◀️ Назад"), id="back", on_click=on_back_to_list),
+            Button(Const("◀️ Назад"), id="back", on_click=on_back_to_edit_menu),
         ),
         state=CreatorTestsSG.edit_expires,
     )
