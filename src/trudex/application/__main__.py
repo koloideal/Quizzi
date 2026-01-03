@@ -5,6 +5,7 @@ from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram_dialog import setup_dialogs
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from dishka import make_async_container
 from dishka.integrations.aiogram import setup_dishka
 
@@ -38,7 +39,7 @@ from trudex.application.bot.user_dialogs.main_menu import user_menu_dialog
 from trudex.application.bot.user_dialogs.registration import \
     registration_dialog
 from trudex.infrastructure.database.repo.user import UserRepository
-from trudex.infrastructure.di import DatabaseProvider
+from trudex.infrastructure.di import DatabaseProvider, SchedulerProvider
 from trudex.infrastructure.utils.bot_commands import setup_bot_commands
 from trudex.infrastructure.utils.config import Config
 
@@ -78,7 +79,11 @@ async def main() -> None:
     router.message.middleware(RejectNotAdminMiddleware())
     router.message.middleware(RejectNotCreatorMiddleware())
     
-    container = make_async_container(DatabaseProvider(), context={Bot: bot, Config: config})
+    container = make_async_container(
+        DatabaseProvider(),
+        SchedulerProvider(),
+        context={Bot: bot, Config: config}
+    )
     setup_dialogs(dp)
     setup_dishka(container, dp, auto_inject=True)
 
@@ -88,13 +93,18 @@ async def main() -> None:
         user_repo = await request_container.get(UserRepository)
         await setup_bot_commands(bot, config, user_repo)
     
+    scheduler = await container.get(AsyncIOScheduler)
+    scheduler.start()
+    
     await bot.delete_webhook(drop_pending_updates=True)
     
     logging.info("Бот запущен")
+    logging.info("Планировщик задач запущен")
     
     try:
         await dp.start_polling(bot)
     finally:
+        scheduler.shutdown()
         await bot.session.close()
 
 

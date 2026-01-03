@@ -1,6 +1,8 @@
 from collections.abc import AsyncIterable
+import logging
 
-from dishka import Provider, Scope, provide
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from dishka import AsyncContainer, Provider, Scope, provide
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from trudex.infrastructure.database.config import new_session_maker
@@ -15,6 +17,7 @@ from trudex.infrastructure.database.repo.test import TestRepository
 from trudex.infrastructure.database.repo.test_attempt import \
     TestAttemptRepository
 from trudex.infrastructure.database.repo.user import UserRepository
+from trudex.infrastructure.scheduling.tasks import deactivate_expired_tests
 from trudex.infrastructure.utils.config import Config
 
 
@@ -70,3 +73,20 @@ class DatabaseProvider(Provider):
     @provide(scope=Scope.REQUEST)
     def get_test_attempt_repository(self, session: AsyncSession) -> TestAttemptRepository:
         return TestAttemptRepository(session)
+
+
+class SchedulerProvider(Provider):
+    @provide(scope = Scope.APP)
+    def get_scheduler(self, container: AsyncContainer) -> AsyncIOScheduler:
+        logging.getLogger('apscheduler').setLevel(logging.WARNING)
+        scheduler = AsyncIOScheduler()
+        
+        scheduler.add_job(
+            deactivate_expired_tests,
+            'interval',
+            minutes=5,
+            args=[container],
+            id='deactivate_expired_tests',
+        )
+        
+        return scheduler
