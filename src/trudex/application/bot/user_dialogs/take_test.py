@@ -63,8 +63,7 @@ async def on_start_test(
     
     active_attempt = await attempt_repo.get_active_attempt(user_id, test_id)
     if active_attempt:
-        await _callback.answer("❌ У вас уже есть активная попытка")
-        return
+        await attempt_repo.attempt_dao.delete(active_attempt.id)
     
     if test.password:
         await manager.start(UserTestSG.password_input, mode=StartMode.NORMAL, data={"test_id": test_id})
@@ -139,7 +138,19 @@ async def on_password_input(
         await message.answer("❌ Неверный пароль")
 
 
-async def on_cancel_test(_callback: CallbackQuery, _button: Button, manager: DialogManager):
+@inject
+async def on_cancel_test(
+    _callback: CallbackQuery,
+    _button: Button,
+    manager: DialogManager,
+    attempt_repo: FromDishka[TestAttemptRepository],
+):
+    start_data = manager.start_data or {}
+    attempt_id = manager.dialog_data.get("attempt_id") or start_data.get("attempt_id")
+    
+    if attempt_id:
+        await attempt_repo.attempt_dao.delete(attempt_id)
+    
     await _callback.answer("Тест отменен")
     await manager.start(UserMenuSG.available_tests, mode=StartMode.RESET_STACK)
 
