@@ -1,4 +1,3 @@
-from datetime import datetime
 from typing import final
 
 from sqlalchemy import func, select
@@ -13,6 +12,7 @@ from trudex.infrastructure.database.dto.user_answer import UserAnswerDTO
 from trudex.infrastructure.database.models import \
     TestAttempt as TestAttemptModel
 from trudex.infrastructure.database.models import UserAnswer as UserAnswerModel
+from trudex.infrastructure.utils.timezone import now_msk
 
 
 @final
@@ -132,7 +132,7 @@ class TestAttemptRepository:
     async def finish_attempt(self, attempt_id: int, score: int, is_passed: bool) -> TestAttempt | None:
         return await self.attempt_dao.update(
             attempt_id=attempt_id,
-            finished_at=datetime.utcnow(),
+            finished_at=now_msk(),
             score=score,
             is_passed=is_passed
         )

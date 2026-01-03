@@ -1,6 +1,6 @@
 import asyncio
 import functools
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta
 
 from aiogram import Bot
 from aiogram.types import BufferedInputFile, CallbackQuery, Message
@@ -20,6 +20,25 @@ from trudex.infrastructure.database.repo.test_attempt import TestAttemptReposito
 from trudex.infrastructure.utils.config import Config
 from trudex.infrastructure.utils.qr_generator import generate_qr_bytes
 from trudex.infrastructure.utils.test_id_to_hash import encode_id
+from trudex.infrastructure.utils.timezone import now_msk, to_msk
+from datetime import datetime
+
+
+def can_edit_field(updated_at: datetime | None) -> bool:
+    if updated_at is None:
+        return True
+    updated_at_msk = to_msk(updated_at)
+    assert updated_at_msk is not None
+    return now_msk() - updated_at_msk >= timedelta(hours=24)
+
+
+def get_remaining_time(updated_at: datetime) -> str:
+    updated_at_msk = to_msk(updated_at)
+    assert updated_at_msk is not None
+    remaining = timedelta(hours=24) - (now_msk() - updated_at_msk)
+    hours = int(remaining.total_seconds() // 3600)
+    minutes = int((remaining.total_seconds() % 3600) // 60)
+    return f"{hours}ч {minutes}м"
 
 
 @inject
@@ -57,19 +76,6 @@ async def get_user_data(
     return {"user_info": user_info}
 
 
-def can_edit_field(updated_at: datetime | None) -> bool:
-    if updated_at is None:
-        return True
-    return datetime.now(timezone.utc) - updated_at >= timedelta(hours=24)
-
-
-def get_remaining_time(updated_at: datetime) -> str:
-    remaining = timedelta(hours=24) - (datetime.now(timezone.utc) - updated_at)
-    hours = int(remaining.total_seconds() // 3600)
-    minutes = int((remaining.total_seconds() % 3600) // 60)
-    return f"{hours}ч {minutes}м"
-
-
 @inject
 async def on_edit_name_clicked(
     _callback: CallbackQuery,
@@ -79,6 +85,7 @@ async def on_edit_name_clicked(
 ):
     assert _callback.from_user is not None
     user = await user_dao.get_by_id(_callback.from_user.id)
+    
     if not user:
         await _callback.answer("❌ Пользователь не найден")
         return
@@ -101,6 +108,7 @@ async def on_edit_group_clicked(
 ):
     assert _callback.from_user is not None
     user = await user_dao.get_by_id(_callback.from_user.id)
+    
     if not user:
         await _callback.answer("❌ Пользователь не найден")
         return
@@ -139,8 +147,15 @@ async def on_name_input(
         return
     
     name = message.text.strip()[:128]
-    await user_dao.update(message.from_user.id, name=name, name_updated_at=datetime.now(timezone.utc))
-    await message.answer("✅ Имя обновлено")
+    result = await user_dao.update(
+        user_id=message.from_user.id,
+        name=name,
+        name_updated_at=now_msk(),
+    )
+    if result:
+        await message.answer("✅ Имя обновлено")
+    else:
+        await message.answer("❌ Не удалось обновить имя")
     await manager.switch_to(UserMenuSG.main)
 
 
@@ -159,8 +174,15 @@ async def on_group_selected(
     user_dao: FromDishka[UserDAO],
 ):
     assert _callback.from_user is not None
-    await user_dao.update(_callback.from_user.id, group=int(item_id), group_updated_at=datetime.now(timezone.utc))
-    await _callback.answer("✅ Группа обновлена")
+    result = await user_dao.update(
+        user_id=_callback.from_user.id,
+        group=int(item_id),
+        group_updated_at=now_msk(),
+    )
+    if result:
+        await _callback.answer("✅ Группа обновлена")
+    else:
+        await _callback.answer("❌ Не удалось обновить группу")
     await manager.switch_to(UserMenuSG.main)
 
 
@@ -255,9 +277,11 @@ async def get_test_detail(
     attempts = await attempt_repo.get_user_test_attempts(user_id, test_id)
     finished_attempts = [a for a in attempts if a.finished_at]
     
-    password_str = f"🔒 Требуется пароль" if test.password else "🔓 Без пароля"
+    password_str = "🔒 Требуется пароль" if test.password else "🔓 Без пароля"
     attempts_str = f"🔄 Попыток: {len(finished_attempts)}/{test.attempts}" if test.attempts else f"🔄 Попыток: {len(finished_attempts)}/♾️"
-    expires_str = f"📅 До {test.expires_at.strftime('%d.%m.%Y %H:%M')}" if test.expires_at else "📅 Без срока"
+    
+    expires_at_msk = to_msk(test.expires_at)
+    expires_str = f"📅 До {expires_at_msk.strftime('%d.%m.%Y %H:%M')}" if expires_at_msk else "📅 Без срока"
     group_str = f"🎓 Для группы {test.for_group}" if test.for_group else "👥 Для всех"
     
     test_info = (
@@ -286,7 +310,8 @@ async def get_my_results(
     results = []
     for attempt, test_title in attempts_with_tests:
         status = "✅" if attempt.is_passed else "❌"
-        date_str = attempt.finished_at.strftime("%d.%m.%Y") if attempt.finished_at else ""
+        finished_at_msk = to_msk(attempt.finished_at)
+        date_str = finished_at_msk.strftime("%d.%m.%Y") if finished_at_msk else ""
         results.append((f"{status} {test_title} — {attempt.score}% ({date_str})", attempt.id))
     
     return {
@@ -325,7 +350,8 @@ async def get_result_detail(
     test_title = test.title if test else "Неизвестный тест"
     
     status = "✅ Пройден" if attempt.is_passed else "❌ Не пройден"
-    date_str = attempt.finished_at.strftime("%d.%m.%Y %H:%M") if attempt.finished_at else "—"
+    finished_at_msk = to_msk(attempt.finished_at)
+    date_str = finished_at_msk.strftime("%d.%m.%Y %H:%M") if finished_at_msk else "—"
     
     lines = [
         f"<b>📝 {test_title}</b>\n",

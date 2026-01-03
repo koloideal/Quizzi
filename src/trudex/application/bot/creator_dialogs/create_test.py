@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, time
 
 from aiogram.types import CallbackQuery, ContentType, Message
 from aiogram_dialog import Dialog, DialogManager, StartMode, Window
@@ -16,6 +16,7 @@ from trudex.infrastructure.database.dao.option import OptionDAO
 from trudex.infrastructure.database.dao.question import QuestionDAO
 from trudex.infrastructure.database.dao.test import TestDAO
 from trudex.infrastructure.database.repo.test import TestRepository
+from trudex.infrastructure.utils.timezone import MSK_TZ, to_msk
 
 
 async def on_title_input(message: Message, _widget: MessageInput, manager: DialogManager):
@@ -110,7 +111,7 @@ async def on_skip_attempts(_callback: CallbackQuery, _button: Button, manager: D
 
 
 async def on_date_selected(_callback, _widget, manager: DialogManager, selected_date: date):
-    manager.dialog_data["expires_at"] = datetime.combine(selected_date, datetime.min.time())
+    manager.dialog_data["expires_at"] = datetime.combine(selected_date, time.min, tzinfo=MSK_TZ)
     await manager.switch_to(CreateTestSG.input_for_group)
 
 
@@ -148,7 +149,8 @@ async def get_test_info(dialog_manager: DialogManager, **_kwargs):
     
     password_str = f"🔒 {password}" if password else "Без пароля"
     attempts_str = f"🔄 {attempts}" if attempts else "♾️ Без ограничений"
-    expires_str = expires_at.strftime("%d.%m.%Y") if expires_at else "Без срока"
+    expires_at_msk = to_msk(expires_at)
+    expires_str = expires_at_msk.strftime("%d.%m.%Y") if expires_at_msk else "Без срока"
     group_str = str(for_group) if for_group else "Для всех"
     
     return {

@@ -1,6 +1,6 @@
 import asyncio
 import functools
-from datetime import date, datetime
+from datetime import date, datetime, time
 
 from aiogram import Bot
 from aiogram.enums import ContentType
@@ -25,6 +25,7 @@ from trudex.infrastructure.database.repo.test_attempt import TestAttemptReposito
 from trudex.infrastructure.utils.config import Config
 from trudex.infrastructure.utils.qr_generator import generate_qr_bytes
 from trudex.infrastructure.utils.test_id_to_hash import encode_id
+from trudex.infrastructure.utils.timezone import MSK_TZ, to_msk
 
 
 @inject
@@ -69,7 +70,7 @@ async def get_test_detail(test_dao: FromDishka[TestDAO], test_repo: FromDishka[T
     status = "🟢 Активен" if test.is_active else "🔴 Деактивирован"
     password_str = f"🔒 {test.password}" if test.password else "🔓 Без пароля"
     attempts_str = f"🔄 {test.attempts}" if test.attempts else "♾️ Без ограничений"
-    expires_str = f"📅 {test.expires_at.strftime('%d.%m.%Y %H:%M')}" if test.expires_at else "📅 Без срока"
+    expires_str = f"📅 {to_msk(test.expires_at).strftime('%d.%m.%Y %H:%M')}" if test.expires_at else "📅 Без срока"
     group_str = f"🎓 Группа {test.for_group}" if test.for_group else "👥 Для всех"
     
     test_info = (
@@ -82,7 +83,7 @@ async def get_test_detail(test_dao: FromDishka[TestDAO], test_repo: FromDishka[T
         f"<b>Попытки:</b> {attempts_str}\n"
         f"<b>Срок:</b> {expires_str}\n"
         f"<b>Группа:</b> {group_str}\n\n"
-        f"<b>Создан:</b> {test.created_at.strftime('%d.%m.%Y %H:%M') if test.created_at else '—'}"
+        f"<b>Создан:</b> {to_msk(test.created_at).strftime('%d.%m.%Y %H:%M') if test.created_at else '—'}"
     )
     
     button_text = "🔴 Деактивировать" if test.is_active else "🟢 Активировать"
@@ -134,7 +135,8 @@ async def get_statistics_data(
     results = []
     for attempt, user_name in attempts_with_users:
         status = "✅" if attempt.is_passed else "❌"
-        date_str = attempt.finished_at.strftime("%d.%m.%Y %H:%M") if attempt.finished_at else ""
+        finished_at_msk = to_msk(attempt.finished_at)
+        date_str = finished_at_msk.strftime("%d.%m.%Y %H:%M") if finished_at_msk else ""
         results.append((f"{status} {user_name} — {attempt.score}% ({date_str})", attempt.id))
     
     return {
@@ -170,7 +172,8 @@ async def get_attempt_detail(
         return {"attempt_info": "❌ Результат не найден"}
     
     status = "✅ Пройден" if attempt.is_passed else "❌ Не пройден"
-    date_str = attempt.finished_at.strftime("%d.%m.%Y %H:%M") if attempt.finished_at else "—"
+    finished_at_msk = to_msk(attempt.finished_at)
+    date_str = finished_at_msk.strftime("%d.%m.%Y %H:%M") if finished_at_msk else "—"
     
     lines = [
         f"<b>📊 Результат прохождения</b>\n",
@@ -380,7 +383,7 @@ async def on_date_selected_for_test(_callback, _widget, manager: DialogManager, 
         await _callback.answer("❌ Тест не найден")
         return
     
-    expires_at = datetime.combine(selected_date, datetime.min.time())
+    expires_at = datetime.combine(selected_date, time.min, tzinfo=MSK_TZ)
     await test_dao.update(test_id, expires_at=expires_at)
     await _callback.answer("✅ Срок действия обновлен")
     await manager.switch_to(CreatorTestsSG.test_detail)

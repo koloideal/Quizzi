@@ -1,5 +1,3 @@
-from datetime import datetime, timezone
-
 from aiogram.types import CallbackQuery, Message
 from aiogram_dialog import Dialog, DialogManager, StartMode, Window
 from aiogram_dialog.widgets.input import MessageInput
@@ -14,6 +12,7 @@ from trudex.infrastructure.database.dao.user_answer import UserAnswerDAO
 from trudex.infrastructure.database.models import QuestionType
 from trudex.infrastructure.database.repo.test import TestRepository
 from trudex.infrastructure.database.repo.test_attempt import TestAttemptRepository
+from trudex.infrastructure.utils.timezone import now_msk
 
 
 async def get_state_for_question_type(question_type: str):
@@ -51,7 +50,7 @@ async def on_start_test(
         await _callback.answer("❌ Тест деактивирован")
         return
     
-    if test.expires_at and test.expires_at < datetime.now(timezone.utc):
+    if test.expires_at and test.expires_at < now_msk():
         await _callback.answer("❌ Срок действия теста истек")
         return
     

@@ -108,7 +108,7 @@ class UserDAO:
         last_name: str | None = None,
         name: str | None = None,
         group: int | None = None,
-        is_admin: bool = False,
+        is_admin: bool | None = None,
     ) -> DomainUser:
         result = await self.session.execute(
             select(User).where(User.id == user_id)
@@ -139,5 +139,5 @@ class UserDAO:
             last_name=last_name,
             name=name,
             group=group,
-            is_admin=is_admin,
+            is_admin=is_admin or False,
         )
