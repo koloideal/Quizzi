@@ -170,7 +170,7 @@ async def get_question_data(
     progress = f"{current_index + 1}/{len(questions)}"
     
     return {
-        "question_text": f"<b>Вопрос {progress}</b>\n\n{question.text}",
+        "question_text": f"<b>📝 Вопрос {progress}</b>\n\n<blockquote>{question.text}</blockquote>",
         "options": [(opt.text, str(opt.id)) for opt in options],
     }
 
@@ -320,7 +320,6 @@ async def on_next_question(
     
     elif answer_data["type"] == "multiple":
         selected_option_ids = set(answer_data["answer"])
-        correct_option_ids = {opt.id for opt in options if opt.is_correct}
         
         selected_texts = sorted([opt.text for opt in options if opt.id in selected_option_ids])
         correct_texts = sorted([opt.text for opt in options if opt.is_correct])
@@ -368,12 +367,15 @@ async def get_results_data(dialog_manager: DialogManager, **_kwargs):
     total_questions = dialog_manager.dialog_data.get("total_questions", 0)
     is_passed = dialog_manager.dialog_data.get("is_passed", False)
     
-    status = "✅ Тест пройден!" if is_passed else "❌ Тест не пройден"
+    if is_passed:
+        status = "✅ <b>Тест пройден!</b>"
+    else:
+        status = "❌ <b>Тест не пройден</b>"
     
     results_text = (
-        f"<b>{status}</b>\n\n"
-        f"<b>Результат:</b> {score}%\n"
-        f"<b>Правильных ответов:</b> {correct_count}/{total_questions}"
+        f"{status}\n\n"
+        f"📊 <b>Результат:</b> {score}%\n"
+        f"✏️ <b>Правильных ответов:</b> {correct_count} из {total_questions}"
     )
     
     return {"results_text": results_text}
@@ -406,7 +408,7 @@ async def get_detailed_results_data(
     
     answers = await attempt_repo.get_answers_for_attempt(attempt_id)
     
-    lines = ["<b>📋 Подробные результаты:</b>\n"]
+    lines = ["<b>📋 Подробные результаты</b>\n"]
     
     for i, answer in enumerate(answers, 1):
         question, options = await test_repo.get_question_with_options(answer.question_id)
@@ -422,11 +424,10 @@ async def get_detailed_results_data(
         if "|" in user_answer:
             user_answer = ", ".join(user_answer.split("|"))
         
-        question_text = question.text.split(" (Тест:")[0] if " (Тест:" in question.text else question.text
-        
-        lines.append(f"<b>{status} Вопрос {i}:</b> {question_text}")
-        lines.append(f"<b>Ваш ответ:</b> {user_answer or '—'}")
-        lines.append(f"<b>Правильный ответ:</b> {', '.join(correct_texts)}\n")
+        lines.append(f"{status} <b>Вопрос {i}</b>")
+        lines.append(f"<blockquote>{question.text}</blockquote>")
+        lines.append(f"👤 <i>Ваш ответ:</i> {user_answer or '—'}")
+        lines.append(f"✓ <i>Правильно:</i> {', '.join(correct_texts)}\n")
     
     return {"detailed_text": "\n".join(lines)}
 

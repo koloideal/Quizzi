@@ -24,15 +24,12 @@ async def start_handler(
 ) -> None:
     assert message.from_user is not None
     
-    # Проверяем, существует ли пользователь
     existing_user = await user_dao.get_by_id(message.from_user.id)
     
     if existing_user is None:
-        # Новый пользователь - проверяем наличие групп
         groups = await group_dao.get_all()
         
         if len(groups) > 0:
-            # Есть группы - создаем пользователя без группы и имени, показываем регистрацию
             await user_dao.create(
                 user_id=message.from_user.id,
                 first_name=message.from_user.first_name,
@@ -45,7 +42,6 @@ async def start_handler(
                 data={"user_id": message.from_user.id}
             )
         else:
-            # Нет групп - просто создаем пользователя
             await user_dao.create(
                 user_id=message.from_user.id,
                 first_name=message.from_user.first_name,
@@ -54,28 +50,22 @@ async def start_handler(
             )
             await dialog_manager.start(UserMenuSG.main, mode=StartMode.RESET_STACK)
     else:
-        # Существующий пользователь
-        # Проверяем, заполнил ли он имя и группу
         groups = await group_dao.get_all()
         
         if len(groups) > 0 and (existing_user.name is None or existing_user.group is None):
-            # Есть группы, но пользователь не завершил регистрацию
             if existing_user.name is None:
-                # Начинаем с ввода имени
                 await dialog_manager.start(
                     UserRegistrationSG.input_name,
                     mode=StartMode.RESET_STACK,
                     data={"user_id": message.from_user.id}
                 )
             else:
-                # Имя есть, но нет группы
                 await dialog_manager.start(
                     UserRegistrationSG.select_group,
                     mode=StartMode.RESET_STACK,
                     data={"user_id": message.from_user.id}
                 )
         else:
-            # Регистрация завершена или групп нет - обновляем данные и открываем меню
             await user_dao.upsert(
                 user_id=message.from_user.id,
                 first_name=message.from_user.first_name,
@@ -87,18 +77,12 @@ async def start_handler(
 
 @router.message(Command("admin"))
 async def admin_command(message: Message, dialog_manager: DialogManager) -> None:
-    try:
-        await dialog_manager.start(AdminMenuSG.main, mode=StartMode.RESET_STACK)
-    except Exception as e:
-        await message.answer(f"Ошибка запуска диалога: {e}")
+    await dialog_manager.start(AdminMenuSG.main, mode=StartMode.RESET_STACK)
 
 
 @router.message(Command("creator"))
 async def creator_command(message: Message, dialog_manager: DialogManager) -> None:
-    try:
-        await dialog_manager.start(CreatorMenuSG.main, mode=StartMode.RESET_STACK)
-    except Exception as e:
-        await message.answer(f"Ошибка запуска диалога: {e}")
+    await dialog_manager.start(CreatorMenuSG.main, mode=StartMode.RESET_STACK)
 
 
 @router.error()
