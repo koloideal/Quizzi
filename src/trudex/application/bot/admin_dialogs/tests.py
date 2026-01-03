@@ -13,8 +13,8 @@ from dishka import FromDishka
 from dishka.integrations.aiogram_dialog import inject
 
 from trudex.application.bot.admin_dialogs.states import (AdminMenuSG,
-                                                         AdminTestsSG)
-from trudex.application.bot.creator_dialogs.states import CreateTestSG
+                                                         AdminTestsSG,
+                                                         AdminCreateTestSG)
 from trudex.infrastructure.database.dao.group import GroupDAO
 from trudex.infrastructure.database.dao.test import TestDAO
 from trudex.infrastructure.database.repo.test import TestRepository
@@ -420,7 +420,7 @@ async def on_remove_expires(_callback: CallbackQuery, _button: Button, manager: 
 
 
 async def on_add_test_clicked(_callback: CallbackQuery, _button: Button, manager: DialogManager):
-    await manager.start(CreateTestSG.input_title, mode=StartMode.RESET_STACK)
+    await manager.start(AdminCreateTestSG.input_title, mode=StartMode.RESET_STACK)
 
 
 async def on_back_clicked(_callback: CallbackQuery, _button: Button, manager: DialogManager):

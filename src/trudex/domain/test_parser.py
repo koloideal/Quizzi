@@ -127,11 +127,11 @@ class TestParser:
             return None
         
         if min_val is not None and value < min_val:
-            errors.append(ParseError(f"Поле '{key}' должно быть >= {min_val}", path=key))
+            errors.append(ParseError(f"Поле '{key}' должно быть не меньше {min_val}", path=key))
             return None
         
         if max_val is not None and value > max_val:
-            errors.append(ParseError(f"Поле '{key}' должно быть <= {max_val}", path=key))
+            errors.append(ParseError(f"Поле '{key}' должно быть не больше {max_val}", path=key))
             return None
         
         return value

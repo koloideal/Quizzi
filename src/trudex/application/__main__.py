@@ -11,6 +11,8 @@ from dishka.integrations.aiogram import setup_dishka
 
 from trudex.application.bot.admin_dialogs.broadcast import \
     broadcast_dialog as admin_broadcast_dialog
+from trudex.application.bot.admin_dialogs.create_test import \
+    admin_create_test_dialog
 from trudex.application.bot.admin_dialogs.groups import \
     groups_dialog as admin_groups_dialog
 from trudex.application.bot.admin_dialogs.main_menu import admin_menu_dialog
@@ -77,6 +79,7 @@ async def main() -> None:
         admin_groups_dialog,
         admin_broadcast_dialog,
         admin_templates_dialog,
+        admin_create_test_dialog,
         creator_menu_dialog,
         creator_users_dialog,
         creator_tests_dialog,

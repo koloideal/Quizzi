@@ -41,3 +41,21 @@ class AdminGroupsSG(StatesGroup):
     add_group_input_number = State()
     delete_groups_list = State()
     delete_confirm = State()
+
+
+class AdminCreateTestSG(StatesGroup):
+    input_title = State()
+    input_description = State()
+    input_password = State()
+    input_attempts = State()
+    input_expires_at = State()
+    input_for_group = State()
+    confirm_test_info = State()
+    add_question = State()
+    input_question_text = State()
+    select_question_type = State()
+    input_correct_answer = State()
+    input_options = State()
+    mark_correct_options = State()
+    confirm_question = State()
+    test_created = State()

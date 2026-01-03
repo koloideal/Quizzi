@@ -9,7 +9,7 @@ from aiogram_dialog.widgets.text import Const, Format
 from dishka import FromDishka
 from dishka.integrations.aiogram_dialog import inject
 
-from trudex.application.bot.admin_dialogs.states import AdminMenuSG, AdminTemplatesSG
+from trudex.application.bot.admin_dialogs.states import AdminMenuSG, AdminTemplatesSG, AdminTestsSG
 from trudex.domain.test_parser import ParsedTest, TestParser
 from trudex.infrastructure.database.dao.option import OptionDAO
 from trudex.infrastructure.database.dao.question import QuestionDAO
@@ -291,6 +291,7 @@ async def create_test_from_parsed(
         attempts=parsed.attempts,
         expires_at=parsed.expires_at,
         for_group=parsed.for_group,
+        is_active=False,
     )
     
     for position, q in enumerate(parsed.questions):
@@ -361,7 +362,7 @@ async def on_import_file(
         await message.answer("\n".join(error_lines))
         return
     
-    test_id = await create_test_from_parsed(result, test_dao, question_dao, option_dao)
+    await create_test_from_parsed(result, test_dao, question_dao, option_dao)
     
     await message.answer(
         f"✅ <b>Тест импортирован!</b>\n\n"
@@ -370,7 +371,7 @@ async def on_import_file(
         f"Тест создан в деактивированном состоянии."
     )
     
-    await manager.switch_to(AdminTemplatesSG.main)
+    await manager.start(AdminTestsSG.tests_list, mode=StartMode.RESET_STACK)
 
 
 templates_dialog = Dialog(
