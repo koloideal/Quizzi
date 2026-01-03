@@ -22,6 +22,8 @@ class User(Base):
     name: Mapped[str | None] = mapped_column(String(128))
     group: Mapped[int | None] = mapped_column(CheckConstraint("group >= 1000 AND group <= 9999"))
     is_admin: Mapped[bool] = mapped_column(default=False)
+    name_updated_at: Mapped[datetime | None] = mapped_column(default=None)
+    group_updated_at: Mapped[datetime | None] = mapped_column(default=None)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now())
 

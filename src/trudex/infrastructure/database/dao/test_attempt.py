@@ -78,3 +78,10 @@ class TestAttemptDAO:
         await self.session.delete(attempt)
         await self.session.flush()
         return True
+    
+    async def get_by_user_id(self, user_id: int) -> list[DomainTestAttempt]:
+        result = await self.session.execute(
+            select(TestAttempt).where(TestAttempt.user_id == user_id)
+        )
+        models = list(result.scalars().all())
+        return [TestAttemptDTO(model).to_domain() for model in models]

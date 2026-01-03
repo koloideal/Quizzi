@@ -15,6 +15,8 @@ class UserDTO:
             name=self.model.name,
             group=self.model.group,
             is_admin=self.model.is_admin,
+            name_updated_at=self.model.name_updated_at,
+            group_updated_at=self.model.group_updated_at,
             created_at=self.model.created_at,
             updated_at=self.model.updated_at,
         )

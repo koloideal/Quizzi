@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -55,6 +57,8 @@ class UserDAO:
         name: str | None = None,
         group: int | None = None,
         is_admin: bool | None = None,
+        name_updated_at: datetime | None = None,
+        group_updated_at: datetime | None = None,
     ) -> DomainUser | None:
         result = await self.session.execute(
             select(User).where(User.id == user_id)
@@ -75,6 +79,10 @@ class UserDAO:
             user.group = group
         if is_admin is not None:
             user.is_admin = is_admin
+        if name_updated_at is not None:
+            user.name_updated_at = name_updated_at
+        if group_updated_at is not None:
+            user.group_updated_at = group_updated_at
         
         await self.session.flush()
         await self.session.refresh(user)

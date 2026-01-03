@@ -11,6 +11,8 @@ class User:
     name: str | None = None
     group: int | None = None
     is_admin: bool = False
+    name_updated_at: datetime | None = None
+    group_updated_at: datetime | None = None
     created_at: datetime | None = None
     updated_at: datetime | None = None
 

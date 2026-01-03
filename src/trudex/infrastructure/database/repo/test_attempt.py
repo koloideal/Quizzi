@@ -195,3 +195,19 @@ class TestAttemptRepository:
         
         rows = result.all()
         return [(row.question_id, row.correct / row.total if row.total > 0 else 0.0) for row in rows]
+
+    async def get_user_stats(self, user_id: int) -> dict:
+        result = await self.session.execute(
+            select(
+                func.count(TestAttemptModel.id).label("total_attempts"),
+                func.avg(TestAttemptModel.score).label("avg_score"),
+            ).where(
+                TestAttemptModel.user_id == user_id,
+                TestAttemptModel.finished_at.isnot(None)
+            )
+        )
+        row = result.one()
+        return {
+            "total_attempts": row.total_attempts or 0,
+            "avg_score": round(row.avg_score, 1) if row.avg_score else 0,
+        }
