@@ -6,8 +6,11 @@ from aiogram_dialog.widgets.text import Const, Format
 from dishka import FromDishka
 from dishka.integrations.aiogram_dialog import inject
 
-from trudex.application.bot.user_dialogs.states import (UserMenuSG,
-                                                        UserRegistrationSG)
+from trudex.application.bot.user_dialogs.states import (
+    UserDeeplinkSG,
+    UserMenuSG,
+    UserRegistrationSG,
+)
 from trudex.infrastructure.database.dao.group import GroupDAO
 from trudex.infrastructure.database.dao.user import UserDAO
 
@@ -27,7 +30,8 @@ async def on_name_input(message: Message, _widget: MessageInput, manager: Dialog
         await message.answer("❌ Имя и фамилия слишком длинные (максимум 128 символов)")
         return
     
-    user_id = manager.start_data.get("user_id")
+    start_data = manager.start_data or {}
+    user_id = start_data.get("user_id")
     await user_dao.update(user_id=user_id, name=name)
     
     manager.dialog_data["name"] = name
@@ -35,7 +39,7 @@ async def on_name_input(message: Message, _widget: MessageInput, manager: Dialog
 
 
 @inject
-async def get_groups_for_registration(dialog_manager: DialogManager, group_dao: FromDishka[GroupDAO], **_kwargs):
+async def get_groups_for_registration(group_dao: FromDishka[GroupDAO], **_kwargs):
     groups = await group_dao.get_all()
     
     return {
@@ -45,9 +49,20 @@ async def get_groups_for_registration(dialog_manager: DialogManager, group_dao: 
 
 @inject
 async def on_group_selected(_callback: CallbackQuery, _widget, manager: DialogManager, item_id: str, user_dao: FromDishka[UserDAO]):
-    user_id = manager.start_data.get("user_id")
+    start_data = manager.start_data or {}
+    user_id = start_data.get("user_id")
+    pending_test_id = start_data.get("pending_test_id")
+    
     await user_dao.update(user_id=user_id, group=int(item_id))
-    await manager.start(UserMenuSG.main, mode=StartMode.RESET_STACK)
+    
+    if pending_test_id:
+        await manager.start(
+            UserDeeplinkSG.test_preview,
+            mode=StartMode.RESET_STACK,
+            data={"test_id": pending_test_id}
+        )
+    else:
+        await manager.start(UserMenuSG.main, mode=StartMode.RESET_STACK)
 
 
 registration_dialog = Dialog(

@@ -20,6 +20,11 @@ class UserTestSG(StatesGroup):
     detailed_results = State()
 
 
+class UserDeeplinkSG(StatesGroup):
+    test_preview = State()
+    password_input = State()
+
+
 class UserRegistrationSG(StatesGroup):
     input_name = State()
     select_group = State()

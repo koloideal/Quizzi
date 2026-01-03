@@ -35,6 +35,7 @@ from trudex.application.bot.middlewares.reject_not_admin import \
     RejectNotAdminMiddleware
 from trudex.application.bot.middlewares.reject_not_creator import \
     RejectNotCreatorMiddleware
+from trudex.application.bot.user_dialogs.deeplink import deeplink_dialog
 from trudex.application.bot.user_dialogs.main_menu import user_menu_dialog
 from trudex.application.bot.user_dialogs.registration import \
     registration_dialog
@@ -65,6 +66,7 @@ async def main() -> None:
         user_menu_dialog,
         take_test_dialog,
         registration_dialog,
+        deeplink_dialog,
         admin_menu_dialog,
         admin_users_dialog,
         admin_tests_dialog,
