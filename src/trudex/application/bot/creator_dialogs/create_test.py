@@ -55,7 +55,7 @@ async def on_description_input(message: Message, _widget: MessageInput, manager:
 
 
 @inject
-async def on_password_input(message: Message, _widget: MessageInput, manager: DialogManager, group_dao: FromDishka[GroupDAO]):
+async def on_password_input(message: Message, _widget: MessageInput, manager: DialogManager, _group_dao: FromDishka[GroupDAO]):
     if not message.text:
         await message.answer("❌ Пароль не может быть пустым")
         return
@@ -74,7 +74,7 @@ async def on_password_input(message: Message, _widget: MessageInput, manager: Di
 
 
 @inject
-async def on_skip_password(_callback: CallbackQuery, _button: Button, manager: DialogManager, group_dao: FromDishka[GroupDAO]):
+async def on_skip_password(_callback: CallbackQuery, _button: Button, manager: DialogManager, _group_dao: FromDishka[GroupDAO]):
     manager.dialog_data["password"] = None
     await manager.switch_to(CreateTestSG.input_attempts)
 
@@ -120,7 +120,7 @@ async def on_skip_expires(_callback: CallbackQuery, _button: Button, manager: Di
 
 
 @inject
-async def get_groups_for_test(dialog_manager: DialogManager, group_dao: FromDishka[GroupDAO], **_kwargs):
+async def get_groups_for_test(group_dao: FromDishka[GroupDAO], **_kwargs):
     groups = await group_dao.get_all()
     
     return {

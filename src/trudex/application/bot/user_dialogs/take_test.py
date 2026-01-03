@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from aiogram.types import CallbackQuery, Message
 from aiogram_dialog import Dialog, DialogManager, StartMode, Window
@@ -34,6 +34,7 @@ async def on_start_test(
     test_repo: FromDishka[TestRepository],
     attempt_repo: FromDishka[TestAttemptRepository],
 ):
+    assert _callback.from_user is not None
     test_id = manager.dialog_data.get("selected_test_id")
     user_id = _callback.from_user.id
     
@@ -50,7 +51,7 @@ async def on_start_test(
         await _callback.answer("❌ Тест деактивирован")
         return
     
-    if test.expires_at and test.expires_at < datetime.utcnow():
+    if test.expires_at and test.expires_at < datetime.now(timezone.utc):
         await _callback.answer("❌ Срок действия теста истек")
         return
     
@@ -101,7 +102,9 @@ async def on_password_input(
     test_repo: FromDishka[TestRepository],
     attempt_repo: FromDishka[TestAttemptRepository],
 ):
+    assert message.from_user is not None
     start_data = manager.start_data or {}
+    assert isinstance(start_data, dict)
     test_id = start_data.get("test_id")
     
     if not test_id:
@@ -146,6 +149,7 @@ async def on_cancel_test(
     attempt_repo: FromDishka[TestAttemptRepository],
 ):
     start_data = manager.start_data or {}
+    assert isinstance(start_data, dict)
     attempt_id = manager.dialog_data.get("attempt_id") or start_data.get("attempt_id")
     
     if attempt_id:
@@ -159,9 +163,10 @@ async def on_cancel_test(
 async def get_question_data(
     dialog_manager: DialogManager,
     test_repo: FromDishka[TestRepository],
-    **_kwargs
+    **_kwargs,
 ):
     start_data = dialog_manager.start_data or {}
+    assert isinstance(start_data, dict)
     
     current_index = dialog_manager.dialog_data.get("current_question_index")
     if current_index is None:
@@ -188,6 +193,7 @@ async def get_question_data(
 
 async def on_single_answer_selected(_callback: CallbackQuery, _widget, manager: DialogManager, item_id: str):
     start_data = manager.start_data or {}
+    assert isinstance(start_data, dict)
     current_index = manager.dialog_data.get("current_question_index")
     if current_index is None:
         current_index = start_data.get("current_question_index", 0)
@@ -204,6 +210,7 @@ async def on_single_answer_selected(_callback: CallbackQuery, _widget, manager: 
 
 async def on_multiple_answer_changed(_event, widget, manager: DialogManager, _data: str):
     start_data = manager.start_data or {}
+    assert isinstance(start_data, dict)
     current_index = manager.dialog_data.get("current_question_index")
     if current_index is None:
         current_index = start_data.get("current_question_index", 0)
@@ -230,6 +237,7 @@ async def on_text_answer_input(
     answer_dao: FromDishka[UserAnswerDAO],
 ):
     start_data = manager.start_data or {}
+    assert isinstance(start_data, dict)
     current_index = manager.dialog_data.get("current_question_index")
     if current_index is None:
         current_index = start_data.get("current_question_index", 0)
@@ -285,6 +293,7 @@ async def on_next_question(
     answer_dao: FromDishka[UserAnswerDAO],
 ):
     start_data = manager.start_data or {}
+    assert isinstance(start_data, dict)
     current_index = manager.dialog_data.get("current_question_index")
     if current_index is None:
         current_index = start_data.get("current_question_index", 0)
@@ -409,9 +418,10 @@ async def get_detailed_results_data(
     dialog_manager: DialogManager,
     attempt_repo: FromDishka[TestAttemptRepository],
     test_repo: FromDishka[TestRepository],
-    **_kwargs
+    **_kwargs,
 ):
     start_data = dialog_manager.start_data or {}
+    assert isinstance(start_data, dict)
     attempt_id = dialog_manager.dialog_data.get("attempt_id") or start_data.get("attempt_id")
     
     if not attempt_id:

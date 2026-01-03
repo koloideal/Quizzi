@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from aiogram.types import CallbackQuery, Message
 from aiogram_dialog import Dialog, DialogManager, Window
@@ -21,8 +21,9 @@ async def get_user_data(
     dialog_manager: DialogManager,
     user_dao: FromDishka[UserDAO],
     attempt_repo: FromDishka[TestAttemptRepository],
-    **_kwargs
+    **_kwargs,
 ):
+    assert dialog_manager.event.from_user is not None
     user_id = dialog_manager.event.from_user.id
     user = await user_dao.get_by_id(user_id)
     stats = await attempt_repo.get_user_stats(user_id)
@@ -53,11 +54,11 @@ async def get_user_data(
 def can_edit_field(updated_at: datetime | None) -> bool:
     if updated_at is None:
         return True
-    return datetime.utcnow() - updated_at >= timedelta(hours=24)
+    return datetime.now(timezone.utc) - updated_at >= timedelta(hours=24)
 
 
 def get_remaining_time(updated_at: datetime) -> str:
-    remaining = timedelta(hours=24) - (datetime.utcnow() - updated_at)
+    remaining = timedelta(hours=24) - (datetime.now(timezone.utc) - updated_at)
     hours = int(remaining.total_seconds() // 3600)
     minutes = int((remaining.total_seconds() % 3600) // 60)
     return f"{hours}ч {minutes}м"
@@ -68,14 +69,16 @@ async def on_edit_name_clicked(
     _callback: CallbackQuery,
     _button: Button,
     manager: DialogManager,
-    user_dao: FromDishka[UserDAO]
+    user_dao: FromDishka[UserDAO],
 ):
+    assert _callback.from_user is not None
     user = await user_dao.get_by_id(_callback.from_user.id)
     if not user:
         await _callback.answer("❌ Пользователь не найден")
         return
     
     if not can_edit_field(user.name_updated_at):
+        assert user.name_updated_at is not None
         remaining = get_remaining_time(user.name_updated_at)
         await _callback.answer(f"⏳ Изменить можно через {remaining}")
         return
@@ -88,14 +91,16 @@ async def on_edit_group_clicked(
     _callback: CallbackQuery,
     _button: Button,
     manager: DialogManager,
-    user_dao: FromDishka[UserDAO]
+    user_dao: FromDishka[UserDAO],
 ):
+    assert _callback.from_user is not None
     user = await user_dao.get_by_id(_callback.from_user.id)
     if not user:
         await _callback.answer("❌ Пользователь не найден")
         return
     
     if not can_edit_field(user.group_updated_at):
+        assert user.group_updated_at is not None
         remaining = get_remaining_time(user.group_updated_at)
         await _callback.answer(f"⏳ Изменить можно через {remaining}")
         return
@@ -120,14 +125,15 @@ async def on_name_input(
     message: Message,
     _widget: MessageInput,
     manager: DialogManager,
-    user_dao: FromDishka[UserDAO]
+    user_dao: FromDishka[UserDAO],
 ):
+    assert message.from_user is not None
     if not message.text or len(message.text.strip()) < 2:
         await message.answer("❌ Имя должно содержать минимум 2 символа")
         return
     
     name = message.text.strip()[:128]
-    await user_dao.update(message.from_user.id, name=name, name_updated_at=datetime.utcnow())
+    await user_dao.update(message.from_user.id, name=name, name_updated_at=datetime.now(timezone.utc))
     await message.answer("✅ Имя обновлено")
     await manager.switch_to(UserMenuSG.main)
 
@@ -144,9 +150,10 @@ async def on_group_selected(
     _widget,
     manager: DialogManager,
     item_id: str,
-    user_dao: FromDishka[UserDAO]
+    user_dao: FromDishka[UserDAO],
 ):
-    await user_dao.update(_callback.from_user.id, group=int(item_id), group_updated_at=datetime.utcnow())
+    assert _callback.from_user is not None
+    await user_dao.update(_callback.from_user.id, group=int(item_id), group_updated_at=datetime.now(timezone.utc))
     await _callback.answer("✅ Группа обновлена")
     await manager.switch_to(UserMenuSG.main)
 
@@ -156,8 +163,9 @@ async def get_available_tests(
     dialog_manager: DialogManager,
     user_dao: FromDishka[UserDAO],
     test_repo: FromDishka[TestRepository],
-    **_kwargs
+    **_kwargs,
 ):
+    assert dialog_manager.event.from_user is not None
     user_id = dialog_manager.event.from_user.id
     user = await user_dao.get_by_id(user_id)
     
@@ -186,9 +194,9 @@ async def get_test_detail(
     dialog_manager: DialogManager,
     test_repo: FromDishka[TestRepository],
     attempt_repo: FromDishka[TestAttemptRepository],
-    user_dao: FromDishka[UserDAO],
-    **_kwargs
+    **_kwargs,
 ):
+    assert dialog_manager.event.from_user is not None
     test_id = dialog_manager.dialog_data.get("selected_test_id")
     user_id = dialog_manager.event.from_user.id
     
@@ -200,7 +208,6 @@ async def get_test_detail(
     if not test:
         return {"test_info": "❌ Тест не найден"}
     
-    user = await user_dao.get_by_id(user_id)
     attempts = await attempt_repo.get_user_test_attempts(user_id, test_id)
     finished_attempts = [a for a in attempts if a.finished_at]
     
@@ -226,8 +233,9 @@ async def get_test_detail(
 async def get_my_results(
     dialog_manager: DialogManager,
     attempt_repo: FromDishka[TestAttemptRepository],
-    **_kwargs
+    **_kwargs,
 ):
+    assert dialog_manager.event.from_user is not None
     user_id = dialog_manager.event.from_user.id
     attempts_with_tests = await attempt_repo.get_finished_attempts_with_tests(user_id)
     

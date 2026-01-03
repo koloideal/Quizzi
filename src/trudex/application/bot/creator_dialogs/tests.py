@@ -1,7 +1,6 @@
 import asyncio
 import functools
 from datetime import date, datetime
-import logging
 
 from aiogram import Bot
 from aiogram.enums import ContentType

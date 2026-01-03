@@ -1,5 +1,3 @@
-from datetime import datetime
-
 from aiogram.types import CallbackQuery, Message
 from aiogram_dialog import Dialog, DialogManager, StartMode, Window
 from aiogram_dialog.widgets.input import MessageInput
@@ -9,27 +7,10 @@ from dishka import FromDishka
 from dishka.integrations.aiogram_dialog import inject
 
 from trudex.application.bot.user_dialogs.states import UserDeeplinkSG, UserMenuSG, UserTestSG
-from trudex.domain.schemas import Test, User
 from trudex.infrastructure.database.dao.test import TestDAO
 from trudex.infrastructure.database.models import QuestionType
 from trudex.infrastructure.database.repo.test import TestRepository
 from trudex.infrastructure.database.repo.test_attempt import TestAttemptRepository
-
-
-async def validate_test_access(test: Test | None, user: User | None) -> tuple[bool, str]:
-    if not test:
-        return False, "❌ Тест не найден"
-    
-    if not test.is_active:
-        return False, "❌ Тест деактивирован"
-    
-    if test.expires_at and test.expires_at < datetime.utcnow():
-        return False, "❌ Срок действия теста истек"
-    
-    if test.for_group and user and user.group != test.for_group:
-        return False, f"❌ Тест доступен только для группы {test.for_group}"
-    
-    return True, ""
 
 
 @inject
@@ -37,10 +18,12 @@ async def get_deeplink_test_data(
     dialog_manager: DialogManager,
     test_dao: FromDishka[TestDAO],
     test_repo: FromDishka[TestRepository],
-    **_kwargs
+    **_kwargs,
 ):
-    test_id = dialog_manager.start_data.get("test_id") if dialog_manager.start_data else None
-    error = dialog_manager.start_data.get("error") if dialog_manager.start_data else None
+    start_data = dialog_manager.start_data or {}
+    assert isinstance(start_data, dict)
+    test_id = start_data.get("test_id")
+    error = start_data.get("error")
     
     if error:
         return {"test_info": error, "can_start": False}
@@ -78,7 +61,10 @@ async def on_start_deeplink_test(
     test_repo: FromDishka[TestRepository],
     attempt_repo: FromDishka[TestAttemptRepository],
 ):
+    assert _callback.from_user is not None
+    
     start_data = manager.start_data or {}
+    assert isinstance(start_data, dict)
     test_id = start_data.get("test_id")
     user_id = _callback.from_user.id
     
@@ -156,7 +142,10 @@ async def on_deeplink_password_input(
     test_repo: FromDishka[TestRepository],
     attempt_repo: FromDishka[TestAttemptRepository],
 ):
+    assert message.from_user is not None
+    
     start_data = manager.start_data or {}
+    assert isinstance(start_data, dict)
     test_id = start_data.get("test_id")
     
     if not test_id:

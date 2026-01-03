@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from aiogram import Router
 from aiogram.filters import Command, CommandStart, CommandObject
@@ -93,7 +93,7 @@ async def validate_deeplink_test(
     if not test.is_active:
         return False, "❌ Тест деактивирован"
     
-    if test.expires_at and test.expires_at < datetime.utcnow():
+    if test.expires_at and test.expires_at < datetime.now(timezone.utc):
         return False, "❌ Срок действия теста истек"
     
     user = await user_dao.get_by_id(user_id)
@@ -107,11 +107,11 @@ async def validate_deeplink_test(
 async def start_with_deeplink(
     message: Message,
     command: CommandObject,
+    dialog_manager: DialogManager,
     user_dao: FromDishka[UserDAO],
     group_dao: FromDishka[GroupDAO],
     test_dao: FromDishka[TestDAO],
     config: FromDishka[Config],
-    dialog_manager: DialogManager,
 ) -> None:
     assert message.from_user is not None
     
@@ -156,9 +156,9 @@ async def start_with_deeplink(
 @router.message(CommandStart())
 async def start_handler(
     message: Message,
+    dialog_manager: DialogManager,
     user_dao: FromDishka[UserDAO],
     group_dao: FromDishka[GroupDAO],
-    dialog_manager: DialogManager
 ) -> None:
     is_registered = await ensure_user_registered(
         user_dao, group_dao, message, dialog_manager
@@ -169,12 +169,12 @@ async def start_handler(
 
 
 @router.message(Command("admin"))
-async def admin_command(message: Message, dialog_manager: DialogManager) -> None:
+async def admin_command(_message: Message, dialog_manager: DialogManager) -> None:
     await dialog_manager.start(AdminMenuSG.main, mode=StartMode.RESET_STACK)
 
 
 @router.message(Command("creator"))
-async def creator_command(message: Message, dialog_manager: DialogManager) -> None:
+async def creator_command(_message: Message, dialog_manager: DialogManager) -> None:
     await dialog_manager.start(CreatorMenuSG.main, mode=StartMode.RESET_STACK)
 
 

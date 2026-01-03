@@ -16,7 +16,13 @@ from trudex.infrastructure.database.dao.user import UserDAO
 
 
 @inject
-async def on_name_input(message: Message, _widget: MessageInput, manager: DialogManager, user_dao: FromDishka[UserDAO]):
+async def on_name_input(
+    message: Message,
+    _widget: MessageInput,
+    manager: DialogManager,
+    user_dao: FromDishka[UserDAO],
+):
+    assert message.from_user is not None
     if not message.text:
         await message.answer("❌ Имя и фамилия не могут быть пустыми")
         return
@@ -31,8 +37,10 @@ async def on_name_input(message: Message, _widget: MessageInput, manager: Dialog
         return
     
     start_data = manager.start_data or {}
+    assert isinstance(start_data, dict)
     user_id = start_data.get("user_id")
-    await user_dao.update(user_id=user_id, name=name)
+    if user_id:
+        await user_dao.update(user_id=user_id, name=name)
     
     manager.dialog_data["name"] = name
     await manager.switch_to(UserRegistrationSG.select_group)
@@ -48,12 +56,21 @@ async def get_groups_for_registration(group_dao: FromDishka[GroupDAO], **_kwargs
 
 
 @inject
-async def on_group_selected(_callback: CallbackQuery, _widget, manager: DialogManager, item_id: str, user_dao: FromDishka[UserDAO]):
+async def on_group_selected(
+    _callback: CallbackQuery,
+    _widget,
+    manager: DialogManager,
+    item_id: str,
+    user_dao: FromDishka[UserDAO],
+):
+    assert _callback.from_user is not None
     start_data = manager.start_data or {}
+    assert isinstance(start_data, dict)
     user_id = start_data.get("user_id")
     pending_test_id = start_data.get("pending_test_id")
     
-    await user_dao.update(user_id=user_id, group=int(item_id))
+    if user_id:
+        await user_dao.update(user_id=user_id, group=int(item_id))
     
     if pending_test_id:
         await manager.start(
