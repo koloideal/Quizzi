@@ -64,20 +64,61 @@ async def get_user_detail_data(dialog_manager: DialogManager, user_dao: FromDish
 
 
 @inject
-async def get_confirm_data(dialog_manager: DialogManager, user_dao: FromDishka[UserDAO], **_kwargs):
+async def get_make_admin_confirm_data(dialog_manager: DialogManager, user_dao: FromDishka[UserDAO], **_kwargs):
     user_id = dialog_manager.dialog_data.get("selected_user_id")
     if not user_id:
-        return {"user_info": "Пользователь не выбран"}
+        return {"confirm_text": "❌ Пользователь не выбран"}
     
     user = await user_dao.get_by_id(user_id)
     if not user:
-        return {"user_info": "Пользователь не найден"}
+        return {"confirm_text": "❌ Пользователь не найден"}
     
-    username_str = f"@{user.username}" if user.username else "—"
-    name_str = user.name or f"{user.first_name} {user.last_name or ''}".strip()
-    return {
-        "user_info": f"<b>{name_str}</b>\n{username_str}\nID: <code>{user.id}</code>"
-    }
+    username_str = f"@{user.username}" if user.username else "нет username"
+    name_str = user.name or user.first_name
+    group_str = f"группа {user.group}" if user.group else "без группы"
+    
+    confirm_text = (
+        f"<b>👑 Назначение администратора</b>\n\n"
+        f"Вы собираетесь назначить администратором:\n\n"
+        f"<blockquote>"
+        f"👤 <b>{name_str}</b>\n"
+        f"📱 {username_str}\n"
+        f"🎓 {group_str}\n"
+        f"🆔 <code>{user.id}</code>"
+        f"</blockquote>\n\n"
+        f"⚠️ <i>Администратор получит доступ к управлению тестами, пользователями и рассылкам.</i>"
+    )
+    
+    return {"confirm_text": confirm_text}
+
+
+@inject
+async def get_remove_admin_confirm_data(dialog_manager: DialogManager, user_dao: FromDishka[UserDAO], **_kwargs):
+    user_id = dialog_manager.dialog_data.get("selected_user_id")
+    if not user_id:
+        return {"confirm_text": "❌ Пользователь не выбран"}
+    
+    user = await user_dao.get_by_id(user_id)
+    if not user:
+        return {"confirm_text": "❌ Пользователь не найден"}
+    
+    username_str = f"@{user.username}" if user.username else "нет username"
+    name_str = user.name or user.first_name
+    group_str = f"группа {user.group}" if user.group else "без группы"
+    
+    confirm_text = (
+        f"<b>🚫 Снятие администратора</b>\n\n"
+        f"Вы собираетесь снять с должности администратора:\n\n"
+        f"<blockquote>"
+        f"👤 <b>{name_str}</b>\n"
+        f"📱 {username_str}\n"
+        f"🎓 {group_str}\n"
+        f"🆔 <code>{user.id}</code>"
+        f"</blockquote>\n\n"
+        f"⚠️ <i>Пользователь потеряет доступ к админ-панели.</i>"
+    )
+    
+    return {"confirm_text": confirm_text}
 
 
 async def on_user_selected(_callback: CallbackQuery, _widget: Select, manager: DialogManager, item_id: str):
@@ -207,23 +248,21 @@ users_dialog = Dialog(
         getter=get_user_detail_data,
     ),
     Window(
-        Const("<b>⚠️ Подтверждение</b>\n\nВы уверены, что хотите назначить этого пользователя администратором?\n\n"),
-        Format("{user_info}"),
+        Format("{confirm_text}"),
         Row(
-            Button(Const("✅ Да"), id="confirm_yes", on_click=on_confirm_yes),
-            Button(Const("❌ Нет"), id="confirm_no", on_click=on_confirm_no),
+            Button(Const("✅ Подтвердить"), id="confirm_yes", on_click=on_confirm_yes),
+            Button(Const("◀️ Отмена"), id="confirm_no", on_click=on_confirm_no),
         ),
         state=CreatorUsersSG.make_admin_confirm,
-        getter=get_confirm_data,
+        getter=get_make_admin_confirm_data,
     ),
     Window(
-        Const("<b>⚠️ Подтверждение</b>\n\nВы уверены, что хотите снять этого пользователя с должности администратора?\n\n"),
-        Format("{user_info}"),
+        Format("{confirm_text}"),
         Row(
-            Button(Const("✅ Да"), id="confirm_yes", on_click=on_remove_admin_confirm_yes),
-            Button(Const("❌ Нет"), id="confirm_no", on_click=on_confirm_no),
+            Button(Const("✅ Подтвердить"), id="confirm_yes", on_click=on_remove_admin_confirm_yes),
+            Button(Const("◀️ Отмена"), id="confirm_no", on_click=on_confirm_no),
         ),
         state=CreatorUsersSG.remove_admin_confirm,
-        getter=get_confirm_data,
+        getter=get_remove_admin_confirm_data,
     ),
 )
