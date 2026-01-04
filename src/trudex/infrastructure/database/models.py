@@ -10,7 +10,6 @@ from trudex.domain.schemas import QuestionType
 class Base(DeclarativeBase):
     pass
 
-
 @final
 class User(Base):
     __tablename__ = "users"

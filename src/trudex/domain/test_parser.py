@@ -1,4 +1,4 @@
-import json
+import json5
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -39,9 +39,9 @@ class TestParser:
     
     def parse(self, json_str: str) -> ParsedTest | list[ParseError]:
         try:
-            data = json.loads(json_str)
-        except json.JSONDecodeError as e:
-            return [ParseError(f"Невалидный JSON: {e.msg}", path=None)]
+            data = json5.loads(json_str)
+        except ValueError as e:
+            return [ParseError(f"Невалидный JSON: {e}", path=None)]
         
         if not isinstance(data, dict):
             return [ParseError("JSON должен быть объектом", path=None)]

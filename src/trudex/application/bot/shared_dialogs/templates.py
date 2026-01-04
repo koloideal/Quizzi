@@ -12,6 +12,7 @@ from dishka.integrations.aiogram_dialog import inject
 from trudex.application.bot.shared_dialogs.states import SharedTemplatesSG, SharedTestsSG
 from trudex.domain.schemas import QuestionType
 from trudex.domain.test_parser import ParsedTest, TestParser
+from trudex.infrastructure.database.dao.group import GroupDAO
 from trudex.infrastructure.database.dao.option import OptionDAO
 from trudex.infrastructure.database.dao.question import QuestionDAO
 from trudex.infrastructure.database.dao.test import TestDAO
@@ -330,6 +331,7 @@ async def on_import_file(
     test_dao: FromDishka[TestDAO],
     question_dao: FromDishka[QuestionDAO],
     option_dao: FromDishka[OptionDAO],
+    group_dao: FromDishka[GroupDAO],
 ) -> None:
     if not message.document:
         await message.answer("❌ Отправьте JSON файл")
@@ -372,6 +374,13 @@ async def on_import_file(
             error_lines.append(f"\n... и ещё {len(result) - 10} ошибок")
         await progress_msg.edit_text("\n".join(error_lines))
         return
+    
+    # Проверяем существование группы
+    if result.for_group is not None:
+        group = await group_dao.get_by_number(result.for_group)
+        if not group:
+            await progress_msg.edit_text(f"❌ Группа {result.for_group} не существует")
+            return
     
     await create_test_from_parsed(result, test_dao, question_dao, option_dao)
     
