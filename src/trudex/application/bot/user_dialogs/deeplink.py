@@ -91,7 +91,6 @@ async def on_start_deeplink_test(
         await attempt_repo.attempt_dao.delete(active_attempt.id)
     
     if test.password:
-        # Проверяем rate limit перед показом экрана ввода пароля
         allowed, wait_time = await rate_limiter.check(user_id)
         if not allowed:
             minutes = int(wait_time // 60) + 1
@@ -173,7 +172,6 @@ async def on_deeplink_password_input(
             manager, test_repo, attempt_repo, test_id, message.from_user.id
         )
     else:
-        # Проверяем rate limit при неверном пароле
         allowed, wait_time = await rate_limiter.check(message.from_user.id)
         if not allowed:
             minutes = int(wait_time // 60) + 1

@@ -52,16 +52,13 @@ async def main() -> None:
         take_test_dialog,
         registration_dialog,
         deeplink_dialog,
-        # Shared dialogs
         shared_tests_dialog,
         shared_groups_dialog,
         shared_broadcast_dialog,
         shared_templates_dialog,
         shared_create_test_dialog,
-        # Admin dialogs
         admin_menu_dialog,
         admin_users_dialog,
-        # Creator dialogs
         creator_menu_dialog,
         creator_users_dialog,
     )

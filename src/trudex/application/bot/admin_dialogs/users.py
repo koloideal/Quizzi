@@ -179,7 +179,6 @@ async def get_user_result_detail(
         "\n<b>📋 Ответы:</b>\n",
     ]
     
-    # Загружаем все вопросы за один запрос
     question_ids = [answer.question_id for answer in answers]
     questions_map = await test_repo.get_questions_with_options_by_ids(question_ids)
     

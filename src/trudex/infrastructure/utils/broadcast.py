@@ -37,7 +37,6 @@ async def broadcast_message(bot: Bot, message_id: int, chat_id: int, user_dao: U
         except TelegramRetryAfter as e:
             logger.warning("Rate limited, waiting %d seconds", e.retry_after)
             await asyncio.sleep(e.retry_after)
-            # Retry after waiting
             try:
                 await bot.copy_message(chat_id=user.id, from_chat_id=chat_id, message_id=message_id)
                 success += 1

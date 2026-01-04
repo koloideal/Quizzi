@@ -15,6 +15,7 @@ class ParsedQuestion:
     question_type: str
     options: list[ParsedOption]
     correct_answer: str | None = None
+    image_url: str | None = None
 
 
 @dataclass
@@ -219,16 +220,48 @@ class TestParser:
             ))
             return None
         
+        image_url = self._parse_image_url(data, path, errors)
+        
         if question_type == "input":
-            return self._parse_input_question(data, path, text, errors)
+            return self._parse_input_question(data, path, text, image_url, errors)
         else:
-            return self._parse_choice_question(data, path, text, question_type, errors)
+            return self._parse_choice_question(data, path, text, question_type, image_url, errors)
+    
+    def _parse_image_url(
+        self,
+        data: dict,
+        path: str,
+        errors: list[ParseError],
+    ) -> str | None:
+        image_url = data.get("image_url")
+        
+        if image_url is None:
+            return None
+        
+        if not isinstance(image_url, str):
+            errors.append(ParseError("Поле 'image_url' должно быть строкой", path=f"{path}.image_url"))
+            return None
+        
+        image_url = image_url.strip()
+        if not image_url:
+            return None
+        
+        if not image_url.startswith(("http://", "https://")):
+            errors.append(ParseError("Поле 'image_url' должно быть URL (http:// или https://)", path=f"{path}.image_url"))
+            return None
+        
+        if len(image_url) > 2000:
+            errors.append(ParseError("URL изображения слишком длинный (максимум 2000)", path=f"{path}.image_url"))
+            return None
+        
+        return image_url
     
     def _parse_input_question(
         self,
         data: dict,
         path: str,
         text: str,
+        image_url: str | None,
         errors: list[ParseError],
     ) -> ParsedQuestion | None:
         correct_answer = data.get("correct_answer")
@@ -254,6 +287,7 @@ class TestParser:
             question_type="input",
             options=[ParsedOption(text=correct_answer, is_correct=True)],
             correct_answer=correct_answer,
+            image_url=image_url,
         )
     
     def _parse_choice_question(
@@ -262,6 +296,7 @@ class TestParser:
         path: str,
         text: str,
         question_type: str,
+        image_url: str | None,
         errors: list[ParseError],
     ) -> ParsedQuestion | None:
         options_data = data.get("answers")
@@ -333,4 +368,5 @@ class TestParser:
             text=text,
             question_type=question_type,
             options=options,
+            image_url=image_url,
         )

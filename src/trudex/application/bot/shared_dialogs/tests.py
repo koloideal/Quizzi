@@ -201,7 +201,6 @@ async def get_attempt_detail(
         "<b>📋 Ответы:</b>\n",
     ]
     
-    # Загружаем все вопросы с опциями за один запрос
     question_ids = [answer.question_id for answer in answers]
     questions_map = await test_repo.get_questions_with_options_by_ids(question_ids)
     

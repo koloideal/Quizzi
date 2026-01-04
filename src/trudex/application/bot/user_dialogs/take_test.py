@@ -1,7 +1,10 @@
+from aiogram.enums import ContentType as AiogramContentType
 from aiogram.types import CallbackQuery, Message
 from aiogram_dialog import Dialog, DialogManager, StartMode, Window
+from aiogram_dialog.api.entities import MediaAttachment, MediaId
 from aiogram_dialog.widgets.input import MessageInput
 from aiogram_dialog.widgets.kbd import Button, Column, Multiselect, Radio
+from aiogram_dialog.widgets.media import DynamicMedia
 from aiogram_dialog.widgets.text import Const, Format
 from dishka import FromDishka
 from dishka.integrations.aiogram_dialog import inject
@@ -68,7 +71,6 @@ async def on_start_test(
         await attempt_repo.attempt_dao.delete(active_attempt.id)
     
     if test.password:
-        # Проверяем rate limit перед показом экрана ввода пароля
         allowed, wait_time = await rate_limiter.check(user_id)
         if not allowed:
             minutes = int(wait_time // 60) + 1
@@ -146,7 +148,6 @@ async def on_password_input(
         
         await manager.switch_to(first_state)
     else:
-        # Проверяем rate limit при неверном пароле
         allowed, wait_time = await rate_limiter.check(message.from_user.id)
         if not allowed:
             minutes = int(wait_time // 60) + 1
@@ -190,19 +191,27 @@ async def get_question_data(
     questions = dialog_manager.dialog_data.get("questions") or start_data.get("questions", [])
     
     if not questions or current_index >= len(questions):
-        return {"question_text": "Ошибка", "options": []}
+        return {"question_text": "Ошибка", "options": [], "media": None}
     
     question_id = questions[current_index]
     question, options = await test_repo.get_question_with_options(question_id)
     
     if not question:
-        return {"question_text": "Ошибка", "options": []}
+        return {"question_text": "Ошибка", "options": [], "media": None}
     
     progress = f"{current_index + 1}/{len(questions)}"
+    
+    media = None
+    if question.tg_file_id:
+        media = MediaAttachment(
+            type=AiogramContentType.PHOTO,
+            file_id=MediaId(question.tg_file_id),
+        )
     
     return {
         "question_text": f"<b>📝 Вопрос {progress}</b>\n\n<blockquote>{question.text}</blockquote>",
         "options": [(opt.text, str(opt.id)) for opt in options],
+        "media": media,
     }
 
 
@@ -492,6 +501,7 @@ take_test_dialog = Dialog(
         state=UserTestSG.password_input,
     ),
     Window(
+        DynamicMedia("media", when="media"),
         Format("{question_text}\n\n<i>Выберите один вариант ответа:</i>"),
         Column(
             Radio(
@@ -508,6 +518,7 @@ take_test_dialog = Dialog(
         getter=get_question_data,
     ),
     Window(
+        DynamicMedia("media", when="media"),
         Format("{question_text}\n\n<i>Выберите несколько вариантов ответа:</i>"),
         Column(
             Multiselect(
@@ -524,6 +535,7 @@ take_test_dialog = Dialog(
         getter=get_question_data,
     ),
     Window(
+        DynamicMedia("media", when="media"),
         Format("{question_text}\n\n<i>Введите ответ:</i>"),
         MessageInput(on_text_answer_input),
         state=UserTestSG.question_input,

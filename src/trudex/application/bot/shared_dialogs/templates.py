@@ -1,5 +1,6 @@
 import json
 
+import httpx
 from aiogram import Bot
 from aiogram.types import BufferedInputFile, CallbackQuery, ContentType, Message
 from aiogram_dialog import Dialog, DialogManager, StartMode, Window
@@ -57,6 +58,7 @@ SPEC_INFO = """<b>📋 Спецификация формата JSON</b>
 <code>{
   "question_type": "single",
   "question": "Текст вопроса",
+  "image_url": "https://...",
   "answers": [
     {"option": "Вариант 1", "is_correct": true},
     {"option": "Вариант 2", "is_correct": false}
@@ -67,13 +69,15 @@ SPEC_INFO = """<b>📋 Спецификация формата JSON</b>
 <code>{
   "question_type": "input",
   "question": "Текст вопроса",
+  "image_url": "https://...",
   "correct_answer": "правильный ответ"
 }</code>
 
 <b>⚠️ Важно:</b>
 • Для <code>single</code> — ровно один <code>is_correct: true</code>
 • Для <code>multiple</code> — один или более <code>is_correct: true</code>
-• Минимум 2 варианта ответа для single/multiple"""
+• Минимум 2 варианта ответа для single/multiple
+• <code>image_url</code> — опционально, URL изображения к вопросу"""
 
 
 TEMPLATE_ULTIMATE = """// ═══════════════════════════════════════════════════════════════
@@ -91,7 +95,7 @@ TEMPLATE_ULTIMATE = """// ══════════════════
 // 
 // ❓ ВОПРОСЫ (всего 6):
 //    1. [single]   - Один правильный ответ (3 варианта)
-//    2. [single]   - Один правильный ответ (4 варианта)
+//    2. [single]   - Один правильный ответ (4 варианта) + изображение
 //    3. [multiple] - Несколько правильных (4 варианта, 2 верных)
 //    4. [multiple] - Несколько правильных (5 вариантов, 3 верных)
 //    5. [input]    - Ввод текста (точный ответ)
@@ -101,6 +105,7 @@ TEMPLATE_ULTIMATE = """// ══════════════════
 //    • null означает "не задано" / "без ограничений"
 //    • expires_at в формате ISO 8601: YYYY-MM-DDTHH:MM:SS
 //    • for_group - номер группы или null для всех пользователей
+//    • image_url - URL изображения к вопросу (опционально)
 // 
 // ═══════════════════════════════════════════════════════════════
 
@@ -124,6 +129,7 @@ TEMPLATE_ULTIMATE = """// ══════════════════
     {
       "question_type": "single",
       "question": "Сколько байт в одном килобайте?",
+      "image_url": "https://example.com/kilobyte.png",
       "answers": [
         {"option": "100", "is_correct": false},
         {"option": "1000", "is_correct": false},
@@ -232,6 +238,9 @@ async def on_test_selected_for_export(
             "question": question.text,
         }
         
+        if question.tg_file_id:
+            question_data["tg_file_id"] = question.tg_file_id
+        
         if question.question_type == QuestionType.INPUT:
             correct_options = [o for o in options if o.is_correct]
             if correct_options:
@@ -246,7 +255,6 @@ async def on_test_selected_for_export(
     
     json_str = json.dumps(export_data, ensure_ascii=False, indent=2)
     
-    # Build comment header
     created_str = test.created_at.strftime("%d.%m.%Y %H:%M") if test.created_at else "—"
     updated_str = test.updated_at.strftime("%d.%m.%Y %H:%M") if test.updated_at else "—"
     questions_count = len(questions_with_options)
@@ -288,11 +296,44 @@ async def on_template_ultimate(_callback: CallbackQuery, _button: Button, _manag
     await send_template(_callback, TEMPLATE_ULTIMATE, "ultimate", "Ультимативный пример теста")
 
 
+async def download_image(url: str) -> bytes | None:
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.get(url)
+            if response.status_code != 200:
+                return None
+            content_type = response.headers.get("content-type", "")
+            if not content_type.startswith("image/"):
+                return None
+            if len(response.content) > 10 * 1024 * 1024:
+                return None
+            return response.content
+    except httpx.HTTPError:
+        return None
+
+
+async def upload_image_to_telegram(bot: Bot, image_data: bytes, chat_id: int) -> str | None:
+    try:
+        msg = await bot.send_photo(
+            chat_id=chat_id,
+            photo=BufferedInputFile(image_data, filename="image.jpg"),
+            disable_notification=True,
+        )
+        await msg.delete()
+        if msg.photo:
+            return msg.photo[-1].file_id
+        return None
+    except Exception:
+        return None
+
+
 async def create_test_from_parsed(
     parsed: ParsedTest,
     test_dao: TestDAO,
     question_dao: QuestionDAO,
     option_dao: OptionDAO,
+    bot: Bot | None = None,
+    chat_id: int | None = None,
 ) -> int:
     test = await test_dao.create(
         title=parsed.title,
@@ -305,11 +346,19 @@ async def create_test_from_parsed(
     )
     
     for position, q in enumerate(parsed.questions):
+        tg_file_id: str | None = None
+        
+        if q.image_url and bot and chat_id:
+            image_data = await download_image(q.image_url)
+            if image_data:
+                tg_file_id = await upload_image_to_telegram(bot, image_data, chat_id)
+        
         question = await question_dao.create(
             test_id=test.id,
             text=q.text,
             position=position,
             question_type=q.question_type,
+            tg_file_id=tg_file_id,
         )
         
         for opt in q.options:
@@ -375,14 +424,24 @@ async def on_import_file(
         await progress_msg.edit_text("\n".join(error_lines))
         return
     
-    # Проверяем существование группы
     if result.for_group is not None:
         group = await group_dao.get_by_number(result.for_group)
         if not group:
             await progress_msg.edit_text(f"❌ Группа {result.for_group} не существует")
             return
     
-    await create_test_from_parsed(result, test_dao, question_dao, option_dao)
+    has_images = any(q.image_url for q in result.questions)
+    if has_images:
+        await progress_msg.edit_text("⏳ Загружаю изображения...")
+    
+    await create_test_from_parsed(
+        result,
+        test_dao,
+        question_dao,
+        option_dao,
+        bot=bot_inst if has_images else None,
+        chat_id=message.chat.id if has_images else None,
+    )
     
     await progress_msg.edit_text(
         f"✅ <b>Тест импортирован!</b>\n\n"
