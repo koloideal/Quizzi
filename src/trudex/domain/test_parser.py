@@ -193,18 +193,18 @@ class TestParser:
         return questions
     
     def _parse_question(self, data: dict, path: str, errors: list[ParseError]) -> ParsedQuestion | None:
-        text = data.get("text")
+        text = data.get("question")
         if not text or not isinstance(text, str):
-            errors.append(ParseError("Поле 'text' обязательно и должно быть строкой", path=f"{path}.text"))
+            errors.append(ParseError("Поле 'question' обязательно и должно быть строкой", path=f"{path}.question"))
             return None
         
         text = text.strip()
         if not text:
-            errors.append(ParseError("Текст вопроса не может быть пустым", path=f"{path}.text"))
+            errors.append(ParseError("Текст вопроса не может быть пустым", path=f"{path}.question"))
             return None
         
         if len(text) > 2000:
-            errors.append(ParseError("Текст вопроса слишком длинный (максимум 2000)", path=f"{path}.text"))
+            errors.append(ParseError("Текст вопроса слишком длинный (максимум 2000)", path=f"{path}.question"))
             return None
         
         question_type = data.get("question_type")
@@ -264,45 +264,45 @@ class TestParser:
         question_type: str,
         errors: list[ParseError],
     ) -> ParsedQuestion | None:
-        options_data = data.get("options")
+        options_data = data.get("answers")
         
         if not options_data or not isinstance(options_data, list):
             errors.append(ParseError(
-                f"Для типа '{question_type}' поле 'options' обязательно и должно быть массивом",
-                path=f"{path}.options"
+                f"Для типа '{question_type}' поле 'answers' обязательно и должно быть массивом",
+                path=f"{path}.answers"
             ))
             return None
         
         if len(options_data) < 2:
-            errors.append(ParseError("Минимум 2 варианта ответа", path=f"{path}.options"))
+            errors.append(ParseError("Минимум 2 варианта ответа", path=f"{path}.answers"))
             return None
         
         if len(options_data) > 10:
-            errors.append(ParseError("Максимум 10 вариантов ответа", path=f"{path}.options"))
+            errors.append(ParseError("Максимум 10 вариантов ответа", path=f"{path}.answers"))
             return None
         
         options: list[ParsedOption] = []
         correct_count = 0
         
         for j, opt_data in enumerate(options_data):
-            opt_path = f"{path}.options[{j}]"
+            opt_path = f"{path}.answers[{j}]"
             
             if not isinstance(opt_data, dict):
                 errors.append(ParseError("Вариант ответа должен быть объектом", path=opt_path))
                 continue
             
-            opt_text = opt_data.get("text")
+            opt_text = opt_data.get("option")
             if not opt_text or not isinstance(opt_text, str):
-                errors.append(ParseError("Поле 'text' обязательно", path=f"{opt_path}.text"))
+                errors.append(ParseError("Поле 'option' обязательно", path=f"{opt_path}.option"))
                 continue
             
             opt_text = opt_text.strip()
             if not opt_text:
-                errors.append(ParseError("Текст варианта не может быть пустым", path=f"{opt_path}.text"))
+                errors.append(ParseError("Текст варианта не может быть пустым", path=f"{opt_path}.option"))
                 continue
             
             if len(opt_text) > 255:
-                errors.append(ParseError("Текст варианта слишком длинный (максимум 255)", path=f"{opt_path}.text"))
+                errors.append(ParseError("Текст варианта слишком длинный (максимум 255)", path=f"{opt_path}.option"))
                 continue
             
             is_correct = opt_data.get("is_correct")
@@ -319,13 +319,13 @@ class TestParser:
             return None
         
         if correct_count == 0:
-            errors.append(ParseError("Должен быть хотя бы один правильный ответ", path=f"{path}.options"))
+            errors.append(ParseError("Должен быть хотя бы один правильный ответ", path=f"{path}.answers"))
             return None
         
         if question_type == "single" and correct_count > 1:
             errors.append(ParseError(
                 f"Для типа 'single' должен быть ровно один правильный ответ (найдено {correct_count})",
-                path=f"{path}.options"
+                path=f"{path}.answers"
             ))
             return None
         

@@ -54,18 +54,18 @@ SPEC_INFO = """<b>📋 Спецификация формата JSON</b>
 
 <b>Формат вопроса (single/multiple):</b>
 <code>{
-  "text": "Текст вопроса",
   "question_type": "single",
-  "options": [
-    {"text": "Вариант 1", "is_correct": true},
-    {"text": "Вариант 2", "is_correct": false}
+  "question": "Текст вопроса",
+  "answers": [
+    {"option": "Вариант 1", "is_correct": true},
+    {"option": "Вариант 2", "is_correct": false}
   ]
 }</code>
 
 <b>Формат вопроса (input):</b>
 <code>{
-  "text": "Текст вопроса",
   "question_type": "input",
+  "question": "Текст вопроса",
   "correct_answer": "правильный ответ"
 }</code>
 
@@ -75,96 +75,95 @@ SPEC_INFO = """<b>📋 Спецификация формата JSON</b>
 • Минимум 2 варианта ответа для single/multiple"""
 
 
-TEMPLATE_SINGLE = {
-    "title": "Пример теста с одиночным выбором",
-    "description": "Демонстрация формата single вопросов",
-    "password": None,
-    "attempts": None,
-    "expires_at": None,
-    "for_group": None,
-    "questions": [
-        {
-            "text": "Какой язык программирования используется для разработки Telegram ботов?",
-            "question_type": "single",
-            "options": [
-                {"text": "Python", "is_correct": True},
-                {"text": "HTML", "is_correct": False},
-                {"text": "CSS", "is_correct": False},
-            ],
-        },
-    ],
-}
+TEMPLATE_ULTIMATE = """// ═══════════════════════════════════════════════════════════════
+// УЛЬТИМАТИВНЫЙ ШАБЛОН ТЕСТА
+// ═══════════════════════════════════════════════════════════════
+// 
+// 📝 Название: Ультимативный пример теста
+// 📄 Описание: Полная демонстрация всех возможностей формата
+// 
+// ⚙️ НАСТРОЙКИ:
+//    • Пароль: test2024
+//    • Попыток: 5
+//    • Срок действия: 31 декабря 2026, 23:59
+//    • Для группы: 2024 (или null для всех)
+// 
+// ❓ ВОПРОСЫ (всего 6):
+//    1. [single]   - Один правильный ответ (3 варианта)
+//    2. [single]   - Один правильный ответ (4 варианта)
+//    3. [multiple] - Несколько правильных (4 варианта, 2 верных)
+//    4. [multiple] - Несколько правильных (5 вариантов, 3 верных)
+//    5. [input]    - Ввод текста (точный ответ)
+//    6. [input]    - Ввод текста (регистр игнорируется)
+// 
+// 💡 ПОДСКАЗКИ:
+//    • null означает "не задано" / "без ограничений"
+//    • expires_at в формате ISO 8601: YYYY-MM-DDTHH:MM:SS
+//    • for_group - номер группы или null для всех пользователей
+// 
+// ═══════════════════════════════════════════════════════════════
 
-TEMPLATE_MULTIPLE = {
-    "title": "Пример теста с множественным выбором",
-    "description": "Демонстрация формата multiple вопросов",
-    "password": None,
-    "attempts": None,
-    "expires_at": None,
-    "for_group": None,
-    "questions": [
-        {
-            "text": "Выберите языки программирования:",
-            "question_type": "multiple",
-            "options": [
-                {"text": "Python", "is_correct": True},
-                {"text": "JavaScript", "is_correct": True},
-                {"text": "HTML", "is_correct": False},
-                {"text": "CSS", "is_correct": False},
-            ],
-        },
-    ],
+{
+  "title": "Ультимативный пример теста",
+  "description": "Полная демонстрация всех возможностей формата: разные типы вопросов, настройки доступа, ограничения по времени и группам",
+  "password": "test2024",
+  "attempts": 5,
+  "expires_at": "2026-12-31T23:59:59",
+  "for_group": 2024,
+  "questions": [
+    {
+      "question_type": "single",
+      "question": "Какой язык программирования чаще всего используется для создания Telegram ботов?",
+      "answers": [
+        {"option": "Python", "is_correct": true},
+        {"option": "HTML", "is_correct": false},
+        {"option": "CSS", "is_correct": false}
+      ]
+    },
+    {
+      "question_type": "single",
+      "question": "Сколько байт в одном килобайте?",
+      "answers": [
+        {"option": "100", "is_correct": false},
+        {"option": "1000", "is_correct": false},
+        {"option": "1024", "is_correct": true},
+        {"option": "2048", "is_correct": false}
+      ]
+    },
+    {
+      "question_type": "multiple",
+      "question": "Выберите все языки программирования из списка:",
+      "answers": [
+        {"option": "Python", "is_correct": true},
+        {"option": "JavaScript", "is_correct": true},
+        {"option": "HTML", "is_correct": false},
+        {"option": "CSS", "is_correct": false}
+      ]
+    },
+    {
+      "question_type": "multiple",
+      "question": "Какие из перечисленных являются базами данных?",
+      "answers": [
+        {"option": "PostgreSQL", "is_correct": true},
+        {"option": "MongoDB", "is_correct": true},
+        {"option": "Redis", "is_correct": true},
+        {"option": "React", "is_correct": false},
+        {"option": "Docker", "is_correct": false}
+      ]
+    },
+    {
+      "question_type": "input",
+      "question": "Как называется популярная библиотека для создания Telegram ботов на Python? (одно слово)",
+      "correct_answer": "aiogram"
+    },
+    {
+      "question_type": "input",
+      "question": "Напишите название протокола для безопасной передачи данных в интернете (4 буквы, регистр не важен)",
+      "correct_answer": "HTTPS"
+    }
+  ]
 }
-
-TEMPLATE_INPUT = {
-    "title": "Пример теста с вводом текста",
-    "description": "Демонстрация формата input вопросов",
-    "password": None,
-    "attempts": None,
-    "expires_at": None,
-    "for_group": None,
-    "questions": [
-        {
-            "text": "Как называется библиотека для создания Telegram ботов на Python?",
-            "question_type": "input",
-            "correct_answer": "aiogram",
-        },
-    ],
-}
-
-TEMPLATE_FULL = {
-    "title": "Полный пример теста",
-    "description": "Тест со всеми типами вопросов и настройками",
-    "password": "secret123",
-    "attempts": 3,
-    "expires_at": "2026-12-31T23:59:59",
-    "for_group": 1234,
-    "questions": [
-        {
-            "text": "Выберите правильный ответ:",
-            "question_type": "single",
-            "options": [
-                {"text": "Вариант A", "is_correct": False},
-                {"text": "Вариант B", "is_correct": True},
-                {"text": "Вариант C", "is_correct": False},
-            ],
-        },
-        {
-            "text": "Выберите все правильные ответы:",
-            "question_type": "multiple",
-            "options": [
-                {"text": "Ответ 1", "is_correct": True},
-                {"text": "Ответ 2", "is_correct": True},
-                {"text": "Ответ 3", "is_correct": False},
-            ],
-        },
-        {
-            "text": "Введите ответ:",
-            "question_type": "input",
-            "correct_answer": "ответ",
-        },
-    ],
-}
+"""
 
 
 async def on_export_clicked(_callback: CallbackQuery, _button: Button, manager: DialogManager) -> None:
@@ -204,11 +203,14 @@ async def on_test_selected_for_export(
     item_id: str,
     test_repo: FromDishka[TestRepository],
 ) -> None:
+    assert _callback.message is not None
+    await _callback.answer("⏳ Экспортирую тест...")
+    
     test_id = int(item_id)
     test, questions_with_options = await test_repo.get_full_test(test_id)
     
     if not test:
-        await _callback.answer("❌ Тест не найден")
+        await _callback.message.answer("❌ Тест не найден")
         return
     
     export_data: dict = {
@@ -225,8 +227,8 @@ async def on_test_selected_for_export(
     
     for question, options in questions_with_options:
         question_data: dict = {
-            "text": question.text,
             "question_type": question.question_type.value,
+            "question": question.text,
         }
         
         if question.question_type == QuestionType.INPUT:
@@ -234,8 +236,8 @@ async def on_test_selected_for_export(
             if correct_options:
                 question_data["correct_answer"] = correct_options[0].text
         else:
-            question_data["options"] = [
-                {"text": o.text, "is_correct": o.is_correct}
+            question_data["answers"] = [
+                {"option": o.text, "is_correct": o.is_correct}
                 for o in options
             ]
         
@@ -243,41 +245,46 @@ async def on_test_selected_for_export(
     
     json_str = json.dumps(export_data, ensure_ascii=False, indent=2)
     
+    # Build comment header
+    created_str = test.created_at.strftime("%d.%m.%Y %H:%M") if test.created_at else "—"
+    updated_str = test.updated_at.strftime("%d.%m.%Y %H:%M") if test.updated_at else "—"
+    questions_count = len(questions_with_options)
+    
+    comment_header = f"""// ═══════════════════════════════════════════════════════════════
+// ЭКСПОРТ ТЕСТА: {test.title}
+// ═══════════════════════════════════════════════════════════════
+// 
+// ❓ Вопросов: {questions_count}
+// 📅 Создан: {created_str}
+// 🔄 Обновлён: {updated_str}
+// 
+// ═══════════════════════════════════════════════════════════════
+
+"""
+    
+    full_content = comment_header + json_str
+    
     safe_title = "".join(c if c.isalnum() or c in "-_" else "_" for c in test.title)[:50]
     filename = f"{safe_title}.json"
     
-    assert _callback.message is not None
     await _callback.message.answer_document(
-        document=BufferedInputFile(json_str.encode("utf-8"), filename=filename),
+        document=BufferedInputFile(full_content.encode("utf-8"), filename=filename),
         caption=f"📤 <b>Экспорт теста:</b> {test.title}",
     )
 
 
-async def send_template(callback: CallbackQuery, template: dict, name: str) -> None:
-    json_str = json.dumps(template, ensure_ascii=False, indent=2)
+async def send_template(callback: CallbackQuery, template_str: str, name: str, title: str) -> None:
     filename = f"template_{name}.json"
     
     assert callback.message is not None
     await callback.message.answer_document(
-        document=BufferedInputFile(json_str.encode("utf-8"), filename=filename),
-        caption=f"📄 <b>Шаблон:</b> {template['title']}",
+        document=BufferedInputFile(template_str.encode("utf-8"), filename=filename),
+        caption=f"📄 <b>Шаблон:</b> {title}",
     )
 
 
-async def on_template_single(_callback: CallbackQuery, _button: Button, _manager: DialogManager) -> None:
-    await send_template(_callback, TEMPLATE_SINGLE, "single")
-
-
-async def on_template_multiple(_callback: CallbackQuery, _button: Button, _manager: DialogManager) -> None:
-    await send_template(_callback, TEMPLATE_MULTIPLE, "multiple")
-
-
-async def on_template_input(_callback: CallbackQuery, _button: Button, _manager: DialogManager) -> None:
-    await send_template(_callback, TEMPLATE_INPUT, "input")
-
-
-async def on_template_full(_callback: CallbackQuery, _button: Button, _manager: DialogManager) -> None:
-    await send_template(_callback, TEMPLATE_FULL, "full")
+async def on_template_ultimate(_callback: CallbackQuery, _button: Button, _manager: DialogManager) -> None:
+    await send_template(_callback, TEMPLATE_ULTIMATE, "ultimate", "Ультимативный пример теста")
 
 
 async def create_test_from_parsed(
@@ -332,20 +339,22 @@ async def on_import_file(
         await message.answer("❌ Файл слишком большой (максимум 1 МБ)")
         return
     
+    progress_msg = await message.answer("⏳ Импортирую тест...")
+    
     file = await bot_inst.get_file(message.document.file_id)
     if not file.file_path:
-        await message.answer("❌ Не удалось загрузить файл")
+        await progress_msg.edit_text("❌ Не удалось загрузить файл")
         return
     
     file_bytes = await bot_inst.download_file(file.file_path)
     if not file_bytes:
-        await message.answer("❌ Не удалось загрузить файл")
+        await progress_msg.edit_text("❌ Не удалось загрузить файл")
         return
     
     try:
         json_str = file_bytes.read().decode("utf-8")
     except UnicodeDecodeError:
-        await message.answer("❌ Файл должен быть в кодировке UTF-8")
+        await progress_msg.edit_text("❌ Файл должен быть в кодировке UTF-8")
         return
     
     parser = TestParser()
@@ -353,7 +362,7 @@ async def on_import_file(
     
     if isinstance(result, list):
         if not result:
-            await message.answer("❌ Неизвестная ошибка валидации")
+            await progress_msg.edit_text("❌ Неизвестная ошибка валидации")
             return
         error_lines = ["❌ <b>Ошибки валидации:</b>\n"]
         for err in result[:10]:
@@ -361,12 +370,12 @@ async def on_import_file(
             error_lines.append(f"• {err.message}{path_str}")
         if len(result) > 10:
             error_lines.append(f"\n... и ещё {len(result) - 10} ошибок")
-        await message.answer("\n".join(error_lines))
+        await progress_msg.edit_text("\n".join(error_lines))
         return
     
     await create_test_from_parsed(result, test_dao, question_dao, option_dao)
     
-    await message.answer(
+    await progress_msg.edit_text(
         f"✅ <b>Тест импортирован!</b>\n\n"
         f"📝 <b>Название:</b> {result.title}\n"
         f"❓ <b>Вопросов:</b> {len(result.questions)}\n\n"
@@ -407,14 +416,7 @@ shared_templates_dialog = Dialog(
     ),
     Window(
         Const(SPEC_INFO),
-        Row(
-            Button(Const("📌 Single"), id="tpl_single", on_click=on_template_single),
-            Button(Const("📋 Multiple"), id="tpl_multiple", on_click=on_template_multiple),
-        ),
-        Row(
-            Button(Const("✏️ Input"), id="tpl_input", on_click=on_template_input),
-            Button(Const("📦 Полный"), id="tpl_full", on_click=on_template_full),
-        ),
+        Button(Const("📦 Ультимативный шаблон"), id="tpl_ultimate", on_click=on_template_ultimate),
         Button(Const("◀️ Назад"), id="back", on_click=on_back_to_templates),
         state=SharedTemplatesSG.spec,
     ),
