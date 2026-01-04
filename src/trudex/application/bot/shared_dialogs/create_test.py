@@ -8,7 +8,7 @@ from aiogram_dialog.widgets.text import Const, Format
 from dishka import FromDishka
 from dishka.integrations.aiogram_dialog import inject
 
-from trudex.application.bot.admin_dialogs.states import AdminCreateTestSG, AdminTestsSG
+from trudex.application.bot.shared_dialogs.states import SharedCreateTestSG, SharedTestsSG
 from trudex.infrastructure.database.dao.group import GroupDAO
 from trudex.infrastructure.database.dao.option import OptionDAO
 from trudex.infrastructure.database.dao.question import QuestionDAO
@@ -32,7 +32,7 @@ async def on_title_input(message: Message, _widget: MessageInput, manager: Dialo
         return
     
     manager.dialog_data["title"] = title
-    await manager.switch_to(AdminCreateTestSG.input_description)
+    await manager.switch_to(SharedCreateTestSG.input_description)
 
 
 async def on_description_input(message: Message, _widget: MessageInput, manager: DialogManager):
@@ -50,7 +50,7 @@ async def on_description_input(message: Message, _widget: MessageInput, manager:
         return
     
     manager.dialog_data["description"] = description
-    await manager.switch_to(AdminCreateTestSG.input_password)
+    await manager.switch_to(SharedCreateTestSG.input_password)
 
 
 @inject
@@ -69,13 +69,13 @@ async def on_password_input(message: Message, _widget: MessageInput, manager: Di
         return
     
     manager.dialog_data["password"] = password
-    await manager.switch_to(AdminCreateTestSG.input_attempts)
+    await manager.switch_to(SharedCreateTestSG.input_attempts)
 
 
 @inject
 async def on_skip_password(_callback: CallbackQuery, _button: Button, manager: DialogManager, _group_dao: FromDishka[GroupDAO]):
     manager.dialog_data["password"] = None
-    await manager.switch_to(AdminCreateTestSG.input_attempts)
+    await manager.switch_to(SharedCreateTestSG.input_attempts)
 
 
 async def on_attempts_input(message: Message, _widget: MessageInput, manager: DialogManager):
@@ -100,41 +100,38 @@ async def on_attempts_input(message: Message, _widget: MessageInput, manager: Di
         return
     
     manager.dialog_data["attempts"] = attempts
-    await manager.switch_to(AdminCreateTestSG.input_expires_at)
+    await manager.switch_to(SharedCreateTestSG.input_expires_at)
 
 
 async def on_skip_attempts(_callback: CallbackQuery, _button: Button, manager: DialogManager):
     manager.dialog_data["attempts"] = None
-    await manager.switch_to(AdminCreateTestSG.input_expires_at)
+    await manager.switch_to(SharedCreateTestSG.input_expires_at)
 
 
 async def on_date_selected(_callback, _widget, manager: DialogManager, selected_date: date):
     manager.dialog_data["expires_at"] = datetime.combine(selected_date, time.min)
-    await manager.switch_to(AdminCreateTestSG.input_for_group)
+    await manager.switch_to(SharedCreateTestSG.input_for_group)
 
 
 async def on_skip_expires(_callback: CallbackQuery, _button: Button, manager: DialogManager):
     manager.dialog_data["expires_at"] = None
-    await manager.switch_to(AdminCreateTestSG.input_for_group)
+    await manager.switch_to(SharedCreateTestSG.input_for_group)
 
 
 @inject
 async def get_groups_for_test(group_dao: FromDishka[GroupDAO], **_kwargs):
     groups = await group_dao.get_all()
-    
-    return {
-        "groups": [(str(g.number), str(g.number)) for g in groups],
-    }
+    return {"groups": [(str(g.number), str(g.number)) for g in groups]}
 
 
 async def on_group_selected(_callback: CallbackQuery, _widget, manager: DialogManager, item_id: str):
     manager.dialog_data["for_group"] = int(item_id)
-    await manager.switch_to(AdminCreateTestSG.confirm_test_info)
+    await manager.switch_to(SharedCreateTestSG.confirm_test_info)
 
 
 async def on_skip_group(_callback: CallbackQuery, _button: Button, manager: DialogManager):
     manager.dialog_data["for_group"] = None
-    await manager.switch_to(AdminCreateTestSG.confirm_test_info)
+    await manager.switch_to(SharedCreateTestSG.confirm_test_info)
 
 
 async def get_test_info(dialog_manager: DialogManager, **_kwargs):
@@ -185,12 +182,12 @@ async def on_confirm_test(_callback: CallbackQuery, _button: Button, manager: Di
     
     manager.dialog_data["test_id"] = test.id
     manager.dialog_data["questions"] = []
-    await manager.switch_to(AdminCreateTestSG.add_question)
+    await manager.switch_to(SharedCreateTestSG.add_question)
 
 
 async def on_add_question(_callback: CallbackQuery, _button: Button, manager: DialogManager):
     manager.dialog_data["current_question"] = {}
-    await manager.switch_to(AdminCreateTestSG.input_question_text)
+    await manager.switch_to(SharedCreateTestSG.input_question_text)
 
 
 async def on_question_input(message: Message, _widget: MessageInput, manager: DialogManager):
@@ -223,7 +220,7 @@ async def on_question_input(message: Message, _widget: MessageInput, manager: Di
         return
     
     manager.dialog_data["current_question"] = current_question
-    await manager.switch_to(AdminCreateTestSG.select_question_type)
+    await manager.switch_to(SharedCreateTestSG.select_question_type)
 
 
 async def get_question_type_data(**_kwargs):
@@ -242,10 +239,10 @@ async def on_question_type_selected(_callback: CallbackQuery, _widget, manager: 
     manager.dialog_data["current_question"] = current_question
     
     if item_id == "input":
-        await manager.switch_to(AdminCreateTestSG.input_correct_answer)
+        await manager.switch_to(SharedCreateTestSG.input_correct_answer)
     else:
         manager.dialog_data["current_options"] = []
-        await manager.switch_to(AdminCreateTestSG.input_options)
+        await manager.switch_to(SharedCreateTestSG.input_options)
 
 
 async def on_correct_answer_input(message: Message, _widget: MessageInput, manager: DialogManager):
@@ -265,7 +262,7 @@ async def on_correct_answer_input(message: Message, _widget: MessageInput, manag
     current_question = manager.dialog_data.get("current_question", {})
     current_question["correct_answer"] = answer
     manager.dialog_data["current_question"] = current_question
-    await manager.switch_to(AdminCreateTestSG.confirm_question)
+    await manager.switch_to(SharedCreateTestSG.confirm_question)
 
 
 async def on_option_input(message: Message, _widget: MessageInput, manager: DialogManager):
@@ -300,7 +297,7 @@ async def on_finish_options(_callback: CallbackQuery, _button: Button, manager: 
         await _callback.answer("❌ Добавьте минимум 2 варианта ответа", show_alert=True)
         return
     
-    await manager.switch_to(AdminCreateTestSG.mark_correct_options)
+    await manager.switch_to(SharedCreateTestSG.mark_correct_options)
 
 
 async def get_options_data(dialog_manager: DialogManager, **_kwargs):
@@ -340,7 +337,7 @@ async def on_confirm_correct(_callback: CallbackQuery, _button: Button, manager:
         await _callback.answer("❌ Отметьте хотя бы один правильный ответ", show_alert=True)
         return
     
-    await manager.switch_to(AdminCreateTestSG.confirm_question)
+    await manager.switch_to(SharedCreateTestSG.confirm_question)
 
 
 async def get_question_preview(dialog_manager: DialogManager, **_kwargs):
@@ -357,7 +354,7 @@ async def get_question_preview(dialog_manager: DialogManager, **_kwargs):
         "input": "✏️ Ввод текста",
     }
     
-    preview = f"<b>📝 Предпросмотр вопроса</b>\n\n"
+    preview = "<b>📝 Предпросмотр вопроса</b>\n\n"
     preview += f"<b>Текст:</b> {text}\n"
     preview += f"<b>Тип:</b> {type_names[question_type]}\n"
     preview += f"<b>Изображение:</b> {'✅ Да' if has_image else '❌ Нет'}\n\n"
@@ -420,13 +417,13 @@ async def on_save_question(
     manager.dialog_data.pop("current_options", None)
     
     await _callback.answer("✅ Вопрос добавлен")
-    await manager.switch_to(AdminCreateTestSG.add_question)
+    await manager.switch_to(SharedCreateTestSG.add_question)
 
 
 async def on_cancel_question(_callback: CallbackQuery, _button: Button, manager: DialogManager):
     manager.dialog_data.pop("current_question", None)
     manager.dialog_data.pop("current_options", None)
-    await manager.switch_to(AdminCreateTestSG.add_question)
+    await manager.switch_to(SharedCreateTestSG.add_question)
 
 
 async def get_questions_count(dialog_manager: DialogManager, **_kwargs):
@@ -442,42 +439,42 @@ async def on_finish_test(_callback: CallbackQuery, _button: Button, manager: Dia
         return
     
     await _callback.answer("✅ Тест создан")
-    await manager.start(AdminTestsSG.tests_list, mode=StartMode.RESET_STACK)
+    await manager.start(SharedTestsSG.tests_list, mode=StartMode.RESET_STACK)
 
 
 async def on_cancel(_callback: CallbackQuery, _button: Button, manager: DialogManager):
-    await manager.start(AdminTestsSG.tests_list, mode=StartMode.RESET_STACK)
+    await manager.start(SharedTestsSG.tests_list, mode=StartMode.RESET_STACK)
 
 
-admin_create_test_dialog = Dialog(
+shared_create_test_dialog = Dialog(
     Window(
         Const("<b>📝 Создание теста</b>\n\n💬 <b>Введите название теста:</b>\n<i>(максимум 255 символов)</i>"),
         MessageInput(on_title_input),
         Cancel(Const("◀️ Отмена")),
-        state=AdminCreateTestSG.input_title,
+        state=SharedCreateTestSG.input_title,
     ),
     Window(
         Const("<b>📝 Создание теста</b>\n\n📄 <b>Введите описание теста:</b>\n<i>(максимум 2000 символов)</i>"),
         MessageInput(on_description_input),
-        state=AdminCreateTestSG.input_description,
+        state=SharedCreateTestSG.input_description,
     ),
     Window(
         Const("<b>🔒 Пароль</b>\n\n🔑 <b>Введите пароль для доступа к тесту</b> или пропустите этот шаг:\n<i>(максимум 255 символов)</i>"),
         MessageInput(on_password_input),
         Button(Const("⏭️ Без пароля"), id="skip_password", on_click=on_skip_password),
-        state=AdminCreateTestSG.input_password,
+        state=SharedCreateTestSG.input_password,
     ),
     Window(
         Const("<b>🔄 Количество попыток</b>\n\n🔢 <b>Введите количество попыток</b> (1-100) или пропустите для неограниченного количества:"),
         MessageInput(on_attempts_input),
         Button(Const("⏭️ Без ограничений"), id="skip_attempts", on_click=on_skip_attempts),
-        state=AdminCreateTestSG.input_attempts,
+        state=SharedCreateTestSG.input_attempts,
     ),
     Window(
         Const("<b>📅 Срок действия</b>\n\n🗓 <b>Выберите дату истечения теста</b> или пропустите:"),
         Calendar(id="calendar", on_click=on_date_selected),
         Button(Const("⏭️ Без срока"), id="skip_expires", on_click=on_skip_expires),
-        state=AdminCreateTestSG.input_expires_at,
+        state=SharedCreateTestSG.input_expires_at,
     ),
     Window(
         Const("<b>👥 Группа</b>\n\n🎓 <b>Выберите группу</b> или пропустите для всех:"),
@@ -494,7 +491,7 @@ admin_create_test_dialog = Dialog(
             height=7,
         ),
         Button(Const("⏭️ Для всех"), id="skip_group", on_click=on_skip_group),
-        state=AdminCreateTestSG.input_for_group,
+        state=SharedCreateTestSG.input_for_group,
         getter=get_groups_for_test,
     ),
     Window(
@@ -503,7 +500,7 @@ admin_create_test_dialog = Dialog(
             Button(Const("✅ Создать"), id="confirm", on_click=on_confirm_test),
             Button(Const("❌ Отмена"), id="cancel", on_click=on_cancel),
         ),
-        state=AdminCreateTestSG.confirm_test_info,
+        state=SharedCreateTestSG.confirm_test_info,
         getter=get_test_info,
     ),
     Window(
@@ -512,14 +509,14 @@ admin_create_test_dialog = Dialog(
             Button(Const("➕ Добавить вопрос"), id="add_question", on_click=on_add_question),
             Button(Const("✅ Завершить создание"), id="finish", on_click=on_finish_test),
         ),
-        state=AdminCreateTestSG.add_question,
+        state=SharedCreateTestSG.add_question,
         getter=get_questions_count,
     ),
     Window(
         Const("<b>❓ Текст вопроса</b>\n\n📝 <b>Отправьте текст вопроса</b> или 📷 <b>фото с подписью:</b>\n<i>(максимум 2000 символов)</i>"),
         MessageInput(on_question_input, content_types=[ContentType.TEXT, ContentType.PHOTO]),
         Button(Const("◀️ Назад"), id="back", on_click=on_cancel_question),
-        state=AdminCreateTestSG.input_question_text,
+        state=SharedCreateTestSG.input_question_text,
     ),
     Window(
         Const("<b>📋 Тип вопроса</b>\n\n🎯 <b>Выберите тип вопроса:</b>"),
@@ -531,21 +528,21 @@ admin_create_test_dialog = Dialog(
             on_click=on_question_type_selected,
         )),
         Button(Const("◀️ Назад"), id="back", on_click=on_cancel_question),
-        state=AdminCreateTestSG.select_question_type,
+        state=SharedCreateTestSG.select_question_type,
         getter=get_question_type_data,
     ),
     Window(
         Const("<b>✏️ Правильный ответ</b>\n\n💬 <b>Введите правильный ответ</b> (регистр и пробелы игнорируются):\n<i>(максимум 255 символов)</i>"),
         MessageInput(on_correct_answer_input),
         Button(Const("◀️ Назад"), id="back", on_click=on_cancel_question),
-        state=AdminCreateTestSG.input_correct_answer,
+        state=SharedCreateTestSG.input_correct_answer,
     ),
     Window(
         Format("<b>📝 Варианты ответов</b>\n\n📊 <b>Добавлено вариантов:</b> {options_count}/10\n\n💬 <b>Введите вариант ответа:</b>\n<i>(максимум 255 символов)</i>"),
         MessageInput(on_option_input),
         Button(Const("✅ Завершить добавление вариантов"), id="finish_options", on_click=on_finish_options),
         Button(Const("◀️ Назад"), id="back", on_click=on_cancel_question),
-        state=AdminCreateTestSG.input_options,
+        state=SharedCreateTestSG.input_options,
         getter=get_options_data,
     ),
     Window(
@@ -559,7 +556,7 @@ admin_create_test_dialog = Dialog(
         )),
         Button(Const("✅ Подтвердить выбор"), id="confirm", on_click=on_confirm_correct),
         Button(Const("◀️ Назад"), id="back", on_click=on_cancel_question),
-        state=AdminCreateTestSG.mark_correct_options,
+        state=SharedCreateTestSG.mark_correct_options,
         getter=get_options_data,
     ),
     Window(
@@ -568,7 +565,7 @@ admin_create_test_dialog = Dialog(
             Button(Const("✅ Сохранить"), id="save", on_click=on_save_question),
             Button(Const("❌ Отмена"), id="cancel", on_click=on_cancel_question),
         ),
-        state=AdminCreateTestSG.confirm_question,
+        state=SharedCreateTestSG.confirm_question,
         getter=get_question_preview,
     ),
 )

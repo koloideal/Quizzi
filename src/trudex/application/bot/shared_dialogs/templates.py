@@ -9,13 +9,14 @@ from aiogram_dialog.widgets.text import Const, Format
 from dishka import FromDishka
 from dishka.integrations.aiogram_dialog import inject
 
-from trudex.application.bot.admin_dialogs.states import AdminMenuSG, AdminTemplatesSG, AdminTestsSG
+from trudex.application.bot.shared_dialogs.states import SharedTemplatesSG, SharedTestsSG
 from trudex.domain.schemas import QuestionType
 from trudex.domain.test_parser import ParsedTest, TestParser
 from trudex.infrastructure.database.dao.option import OptionDAO
 from trudex.infrastructure.database.dao.question import QuestionDAO
 from trudex.infrastructure.database.dao.test import TestDAO
 from trudex.infrastructure.database.repo.test import TestRepository
+
 
 TEMPLATES_INFO = (
     "<b>📦 Шаблоны тестов</b>\n\n"
@@ -72,6 +73,7 @@ SPEC_INFO = """<b>📋 Спецификация формата JSON</b>
 • Для <code>single</code> — ровно один <code>is_correct: true</code>
 • Для <code>multiple</code> — один или более <code>is_correct: true</code>
 • Минимум 2 варианта ответа для single/multiple"""
+
 
 TEMPLATE_SINGLE = {
     "title": "Пример теста с одиночным выбором",
@@ -166,23 +168,23 @@ TEMPLATE_FULL = {
 
 
 async def on_export_clicked(_callback: CallbackQuery, _button: Button, manager: DialogManager) -> None:
-    await manager.switch_to(AdminTemplatesSG.export_list)
+    await manager.switch_to(SharedTemplatesSG.export_list)
 
 
 async def on_import_clicked(_callback: CallbackQuery, _button: Button, manager: DialogManager) -> None:
-    await manager.switch_to(AdminTemplatesSG.import_file)
+    await manager.switch_to(SharedTemplatesSG.import_file)
 
 
 async def on_spec_clicked(_callback: CallbackQuery, _button: Button, manager: DialogManager) -> None:
-    await manager.switch_to(AdminTemplatesSG.spec)
+    await manager.switch_to(SharedTemplatesSG.spec)
 
 
 async def on_back_clicked(_callback: CallbackQuery, _button: Button, manager: DialogManager) -> None:
-    await manager.start(AdminMenuSG.main, mode=StartMode.RESET_STACK)
+    await manager.done()
 
 
 async def on_back_to_templates(_callback: CallbackQuery, _button: Button, manager: DialogManager) -> None:
-    await manager.switch_to(AdminTemplatesSG.main)
+    await manager.switch_to(SharedTemplatesSG.main)
 
 
 @inject
@@ -224,7 +226,7 @@ async def on_test_selected_for_export(
     for question, options in questions_with_options:
         question_data: dict = {
             "text": question.text,
-            "question_type": question.question_type,
+            "question_type": question.question_type.value,
         }
         
         if question.question_type == QuestionType.INPUT:
@@ -371,10 +373,10 @@ async def on_import_file(
         f"Тест создан в деактивированном состоянии."
     )
     
-    await manager.start(AdminTestsSG.tests_list, mode=StartMode.RESET_STACK)
+    await manager.start(SharedTestsSG.tests_list, mode=StartMode.RESET_STACK)
 
 
-templates_dialog = Dialog(
+shared_templates_dialog = Dialog(
     Window(
         Const(TEMPLATES_INFO),
         Row(
@@ -383,7 +385,7 @@ templates_dialog = Dialog(
         ),
         Button(Const("📋 Спецификация"), id="spec", on_click=on_spec_clicked),
         Button(Const("◀️ Назад"), id="back", on_click=on_back_clicked),
-        state=AdminTemplatesSG.main,
+        state=SharedTemplatesSG.main,
     ),
     Window(
         Format("<b>📤 Экспорт теста</b>\n\nВыберите тест для экспорта:\n\nВсего: {count}"),
@@ -400,7 +402,7 @@ templates_dialog = Dialog(
             height=7,
         ),
         Button(Const("◀️ Назад"), id="back", on_click=on_back_to_templates),
-        state=AdminTemplatesSG.export_list,
+        state=SharedTemplatesSG.export_list,
         getter=get_tests_for_export,
     ),
     Window(
@@ -414,12 +416,12 @@ templates_dialog = Dialog(
             Button(Const("📦 Полный"), id="tpl_full", on_click=on_template_full),
         ),
         Button(Const("◀️ Назад"), id="back", on_click=on_back_to_templates),
-        state=AdminTemplatesSG.spec,
+        state=SharedTemplatesSG.spec,
     ),
     Window(
         Const("<b>📥 Импорт теста</b>\n\nОтправьте JSON файл с тестом.\n\n<i>Формат файла описан в разделе «Спецификация»</i>"),
         MessageInput(on_import_file, content_types=[ContentType.DOCUMENT]),
         Button(Const("◀️ Назад"), id="back", on_click=on_back_to_templates),
-        state=AdminTemplatesSG.import_file,
+        state=SharedTemplatesSG.import_file,
     ),
 )

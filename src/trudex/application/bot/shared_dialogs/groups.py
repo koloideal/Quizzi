@@ -1,12 +1,12 @@
 from aiogram.types import CallbackQuery, Message
-from aiogram_dialog import Dialog, DialogManager, StartMode, Window
+from aiogram_dialog import Dialog, DialogManager, Window
 from aiogram_dialog.widgets.input import MessageInput
 from aiogram_dialog.widgets.kbd import Button, Column, Row, ScrollingGroup, Select
 from aiogram_dialog.widgets.text import Const, Format
 from dishka import FromDishka
 from dishka.integrations.aiogram_dialog import inject
 
-from trudex.application.bot.admin_dialogs.states import AdminGroupsSG, AdminMenuSG
+from trudex.application.bot.shared_dialogs.states import SharedGroupsSG
 from trudex.infrastructure.database.dao.group import GroupDAO
 
 
@@ -15,7 +15,7 @@ async def on_group_click(_callback: CallbackQuery, _widget, _manager: DialogMana
 
 
 @inject
-async def get_groups_data(dialog_manager: DialogManager, group_dao: FromDishka[GroupDAO], **_kwargs):
+async def get_groups_data(group_dao: FromDishka[GroupDAO], dialog_manager: DialogManager, **_kwargs):
     groups = await group_dao.get_all()
     
     success_message = dialog_manager.dialog_data.pop("success_message", None)
@@ -33,15 +33,15 @@ async def get_groups_data(dialog_manager: DialogManager, group_dao: FromDishka[G
 
 
 async def on_add_group(_callback: CallbackQuery, _button: Button, manager: DialogManager):
-    await manager.switch_to(AdminGroupsSG.add_group_input_number)
+    await manager.switch_to(SharedGroupsSG.add_group_input_number)
 
 
 async def on_delete_group(_callback: CallbackQuery, _button: Button, manager: DialogManager):
-    await manager.switch_to(AdminGroupsSG.delete_groups_list)
+    await manager.switch_to(SharedGroupsSG.delete_groups_list)
 
 
 async def on_back_to_menu(_callback: CallbackQuery, _button: Button, manager: DialogManager):
-    await manager.start(AdminMenuSG.main, mode=StartMode.RESET_STACK)
+    await manager.done()
 
 
 @inject
@@ -67,26 +67,21 @@ async def on_group_number_input(message: Message, _widget: MessageInput, manager
         await message.answer(f"❌ Группа с номером {number} уже существует")
         return
     
-    try:
-        await group_dao.create(number=number)
-        manager.dialog_data["success_message"] = f"✅ Группа {number} создана"
-    except Exception as e:
-        await message.answer(f"❌ Ошибка создания группы: {e}")
-        return
-    
-    await manager.switch_to(AdminGroupsSG.groups_list)
+    await group_dao.create(number=number)
+    manager.dialog_data["success_message"] = f"✅ Группа {number} создана"
+    await manager.switch_to(SharedGroupsSG.groups_list)
 
 
 async def on_cancel_add(_callback: CallbackQuery, _button: Button, manager: DialogManager):
-    await manager.switch_to(AdminGroupsSG.groups_list)
+    await manager.switch_to(SharedGroupsSG.groups_list)
 
 
 @inject
-async def get_delete_groups_data(dialog_manager: DialogManager, group_dao: FromDishka[GroupDAO], **_kwargs):
+async def get_delete_groups_data(group_dao: FromDishka[GroupDAO], **_kwargs):
     groups = await group_dao.get_all()
     
     return {
-        "groups": [(str(g.id), f"{g.number}") for g in groups],
+        "groups": [(str(g.id), str(g.number)) for g in groups],
         "groups_count": len(groups),
     }
 
@@ -100,34 +95,29 @@ async def on_select_group_to_delete(_callback: CallbackQuery, _widget, manager: 
     
     manager.dialog_data["delete_group_id"] = group.id
     manager.dialog_data["delete_group_number"] = group.number
-    await manager.switch_to(AdminGroupsSG.delete_confirm)
+    await manager.switch_to(SharedGroupsSG.delete_confirm)
 
 
 async def get_delete_confirm_data(dialog_manager: DialogManager, **_kwargs):
     number = dialog_manager.dialog_data.get("delete_group_number", "")
-    
-    return {
-        "group_info": str(number)
-    }
+    return {"group_info": str(number)}
 
 
 @inject
 async def on_confirm_delete(_callback: CallbackQuery, _button: Button, manager: DialogManager, group_dao: FromDishka[GroupDAO]):
     group_id = manager.dialog_data.get("delete_group_id")
-
     assert isinstance(group_id, int)
     
     await group_dao.delete(group_id)
-    
     manager.dialog_data["success_message"] = "✅ Группа удалена"
-    await manager.switch_to(AdminGroupsSG.groups_list)
+    await manager.switch_to(SharedGroupsSG.groups_list)
 
 
 async def on_cancel_delete(_callback: CallbackQuery, _button: Button, manager: DialogManager):
-    await manager.switch_to(AdminGroupsSG.delete_groups_list)
+    await manager.switch_to(SharedGroupsSG.delete_groups_list)
 
 
-groups_dialog = Dialog(
+shared_groups_dialog = Dialog(
     Window(
         Format("{message_text}"),
         ScrollingGroup(
@@ -147,14 +137,14 @@ groups_dialog = Dialog(
             Button(Const("🗑 Удалить группу"), id="delete", on_click=on_delete_group),
             Button(Const("◀️ Назад"), id="back", on_click=on_back_to_menu),
         ),
-        state=AdminGroupsSG.groups_list,
+        state=SharedGroupsSG.groups_list,
         getter=get_groups_data,
     ),
     Window(
         Const("<b>➕ Добавление группы</b>\n\n🔢 <b>Введите номер группы</b> (четырехзначное число 1000-9999):"),
         MessageInput(on_group_number_input),
         Button(Const("◀️ Отмена"), id="cancel", on_click=on_cancel_add),
-        state=AdminGroupsSG.add_group_input_number,
+        state=SharedGroupsSG.add_group_input_number,
     ),
     Window(
         Format("<b>🗑 Удаление группы</b>\n\n<b>Выберите группу для удаления:</b>\n\n📊 <b>Всего групп:</b> {groups_count}"),
@@ -171,7 +161,7 @@ groups_dialog = Dialog(
             height=7,
         ),
         Button(Const("◀️ Назад"), id="back", on_click=on_cancel_add),
-        state=AdminGroupsSG.delete_groups_list,
+        state=SharedGroupsSG.delete_groups_list,
         getter=get_delete_groups_data,
     ),
     Window(
@@ -180,7 +170,7 @@ groups_dialog = Dialog(
             Button(Const("✅ Да, удалить"), id="confirm", on_click=on_confirm_delete),
             Button(Const("❌ Отмена"), id="cancel", on_click=on_cancel_delete),
         ),
-        state=AdminGroupsSG.delete_confirm,
+        state=SharedGroupsSG.delete_confirm,
         getter=get_delete_confirm_data,
     ),
 )

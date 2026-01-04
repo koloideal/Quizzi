@@ -11,7 +11,7 @@ from aiogram_dialog.widgets.text import Const, Format
 from dishka import FromDishka
 from dishka.integrations.aiogram_dialog import inject
 
-from trudex.application.bot.admin_dialogs.states import AdminCreateTestSG, AdminMenuSG, AdminTestsSG
+from trudex.application.bot.shared_dialogs.states import SharedCreateTestSG, SharedTestsSG
 from trudex.infrastructure.database.dao.group import GroupDAO
 from trudex.infrastructure.database.dao.test import TestDAO
 from trudex.infrastructure.database.repo.test import TestRepository
@@ -37,7 +37,7 @@ async def get_tests_data(test_dao: FromDishka[TestDAO], **_kwargs):
 
 async def on_test_selected(_callback: CallbackQuery, _widget: Select, manager: DialogManager, item_id: str):
     manager.dialog_data["selected_test_id"] = int(item_id)
-    await manager.switch_to(AdminTestsSG.test_detail)
+    await manager.switch_to(SharedTestsSG.test_detail)
 
 
 @inject
@@ -108,7 +108,7 @@ async def on_toggle_active(_callback: CallbackQuery, _button: Button, manager: D
         await test_dao.update(test_id, is_active=not test.is_active)
         action = "деактивирован" if test.is_active else "активирован"
         await _callback.answer(f"✅ Тест {action}")
-        await manager.switch_to(AdminTestsSG.test_detail)
+        await manager.switch_to(SharedTestsSG.test_detail)
 
 
 @inject
@@ -124,15 +124,15 @@ async def on_toggle_results_viewable(_callback: CallbackQuery, _button: Button, 
         await test_dao.update(test_id, are_results_viewable=not test.are_results_viewable)
         action = "скрыты" if test.are_results_viewable else "видны"
         await _callback.answer(f"✅ Результаты теперь {action}")
-        await manager.switch_to(AdminTestsSG.test_detail)
+        await manager.switch_to(SharedTestsSG.test_detail)
 
 
 async def on_back_to_list(_callback: CallbackQuery, _button: Button, manager: DialogManager):
-    await manager.switch_to(AdminTestsSG.tests_list)
+    await manager.switch_to(SharedTestsSG.tests_list)
 
 
 async def on_statistics(_callback: CallbackQuery, _button: Button, manager: DialogManager):
-    await manager.switch_to(AdminTestsSG.statistics)
+    await manager.switch_to(SharedTestsSG.statistics)
 
 
 @inject
@@ -163,11 +163,11 @@ async def get_statistics_data(
 
 async def on_attempt_selected(_callback: CallbackQuery, _widget: Select, manager: DialogManager, item_id: str):
     manager.dialog_data["selected_attempt_id"] = int(item_id)
-    await manager.switch_to(AdminTestsSG.attempt_detail)
+    await manager.switch_to(SharedTestsSG.attempt_detail)
 
 
 async def on_back_to_statistics(_callback: CallbackQuery, _button: Button, manager: DialogManager):
-    await manager.switch_to(AdminTestsSG.statistics)
+    await manager.switch_to(SharedTestsSG.statistics)
 
 
 @inject
@@ -192,7 +192,7 @@ async def get_attempt_detail(
     date_str = finished_at_msk.strftime("%d.%m.%Y %H:%M") if finished_at_msk else "—"
     
     lines = [
-        f"<b>📊 Результат прохождения</b>\n",
+        "<b>📊 Результат прохождения</b>\n",
         f"📈 <b>Результат:</b> {attempt.score}%",
         f"📅 <b>Дата:</b> {date_str}",
         f"🏆 <b>Статус:</b> {status}\n",
@@ -226,8 +226,9 @@ async def on_share_test(_callback: CallbackQuery, _button: Button, manager: Dial
     test_id = manager.dialog_data.get("selected_test_id")
     
     if not test_id:
-        await _callback.answer("Ошибка: тест не найден")
-        return
+        return {
+            "share_link": "Ошибка: тест не найден"
+        }
     
     test_hash = encode_id(
         test_id, 
@@ -254,31 +255,31 @@ async def on_share_test(_callback: CallbackQuery, _button: Button, manager: Dial
 
 
 async def on_edit_menu(_callback: CallbackQuery, _button: Button, manager: DialogManager):
-    await manager.switch_to(AdminTestsSG.edit_menu)
+    await manager.switch_to(SharedTestsSG.edit_menu)
 
 
 async def on_back_to_detail(_callback: CallbackQuery, _button: Button, manager: DialogManager):
-    await manager.switch_to(AdminTestsSG.test_detail)
+    await manager.switch_to(SharedTestsSG.test_detail)
 
 
 async def on_back_to_edit_menu(_callback: CallbackQuery, _button: Button, manager: DialogManager):
-    await manager.switch_to(AdminTestsSG.edit_menu)
+    await manager.switch_to(SharedTestsSG.edit_menu)
 
 
 async def on_edit_password(_callback: CallbackQuery, _button: Button, manager: DialogManager):
-    await manager.switch_to(AdminTestsSG.edit_password)
+    await manager.switch_to(SharedTestsSG.edit_password)
 
 
 async def on_edit_attempts(_callback: CallbackQuery, _button: Button, manager: DialogManager):
-    await manager.switch_to(AdminTestsSG.edit_attempts)
+    await manager.switch_to(SharedTestsSG.edit_attempts)
 
 
 async def on_edit_group(_callback: CallbackQuery, _button: Button, manager: DialogManager):
-    await manager.switch_to(AdminTestsSG.edit_group)
+    await manager.switch_to(SharedTestsSG.edit_group)
 
 
 async def on_edit_expires(_callback: CallbackQuery, _button: Button, manager: DialogManager):
-    await manager.switch_to(AdminTestsSG.edit_expires)
+    await manager.switch_to(SharedTestsSG.edit_expires)
 
 
 @inject
@@ -299,7 +300,7 @@ async def on_password_input(message: Message, _widget: MessageInput, manager: Di
     
     await test_dao.update(test_id, password=password)
     await message.answer("✅ Пароль обновлен")
-    await manager.switch_to(AdminTestsSG.test_detail)
+    await manager.switch_to(SharedTestsSG.test_detail)
 
 
 @inject
@@ -311,7 +312,7 @@ async def on_remove_password(_callback: CallbackQuery, _button: Button, manager:
     
     await test_dao.update(test_id, password=None)
     await _callback.answer("✅ Пароль удален")
-    await manager.switch_to(AdminTestsSG.test_detail)
+    await manager.switch_to(SharedTestsSG.test_detail)
 
 
 @inject
@@ -343,7 +344,7 @@ async def on_attempts_input_edit(message: Message, _widget: MessageInput, manage
     
     await test_dao.update(test_id, attempts=attempts)
     await message.answer("✅ Количество попыток обновлено")
-    await manager.switch_to(AdminTestsSG.test_detail)
+    await manager.switch_to(SharedTestsSG.test_detail)
 
 
 @inject
@@ -355,7 +356,7 @@ async def on_remove_attempts(_callback: CallbackQuery, _button: Button, manager:
     
     await test_dao.update(test_id, attempts=None)
     await _callback.answer("✅ Ограничение попыток удалено")
-    await manager.switch_to(AdminTestsSG.test_detail)
+    await manager.switch_to(SharedTestsSG.test_detail)
 
 
 @inject
@@ -376,7 +377,7 @@ async def on_group_selected_for_test(_callback: CallbackQuery, _widget, manager:
     
     await test_dao.update(test_id, for_group=int(item_id))
     await _callback.answer("✅ Группа обновлена")
-    await manager.switch_to(AdminTestsSG.test_detail)
+    await manager.switch_to(SharedTestsSG.test_detail)
 
 
 @inject
@@ -388,7 +389,7 @@ async def on_remove_group(_callback: CallbackQuery, _button: Button, manager: Di
     
     await test_dao.update(test_id, for_group=None)
     await _callback.answer("✅ Тест теперь доступен для всех групп")
-    await manager.switch_to(AdminTestsSG.test_detail)
+    await manager.switch_to(SharedTestsSG.test_detail)
 
 
 @inject
@@ -401,7 +402,7 @@ async def on_date_selected_for_test(_callback, _widget, manager: DialogManager, 
     expires_at = datetime.combine(selected_date, time.min)
     await test_dao.update(test_id, expires_at=expires_at)
     await _callback.answer("✅ Срок действия обновлен")
-    await manager.switch_to(AdminTestsSG.test_detail)
+    await manager.switch_to(SharedTestsSG.test_detail)
 
 
 @inject
@@ -413,18 +414,18 @@ async def on_remove_expires(_callback: CallbackQuery, _button: Button, manager: 
     
     await test_dao.update(test_id, expires_at=None)
     await _callback.answer("✅ Срок действия удален")
-    await manager.switch_to(AdminTestsSG.test_detail)
+    await manager.switch_to(SharedTestsSG.test_detail)
 
 
 async def on_add_test_clicked(_callback: CallbackQuery, _button: Button, manager: DialogManager):
-    await manager.start(AdminCreateTestSG.input_title, mode=StartMode.RESET_STACK)
+    await manager.start(SharedCreateTestSG.input_title, mode=StartMode.RESET_STACK)
 
 
 async def on_back_clicked(_callback: CallbackQuery, _button: Button, manager: DialogManager):
-    await manager.start(AdminMenuSG.main, mode=StartMode.RESET_STACK)
+    await manager.done()
 
 
-tests_dialog = Dialog(
+shared_tests_dialog = Dialog(
     Window(
         Format("<b>📝 Тесты</b>\n\nВсего: {count}"),
         ScrollingGroup(
@@ -443,7 +444,7 @@ tests_dialog = Dialog(
             Button(Const("➕ Добавить тест"), id="add_test", on_click=on_add_test_clicked),
             Button(Const("◀️ Назад"), id="back", on_click=on_back_clicked),
         ),
-        state=AdminTestsSG.tests_list,
+        state=SharedTestsSG.tests_list,
         getter=get_tests_data,
     ),
     Window(
@@ -464,7 +465,7 @@ tests_dialog = Dialog(
             Button(Const("✏️ Изменить"), id="edit_menu", on_click=on_edit_menu),
             Button(Const("◀️ Назад"), id="back", on_click=on_back_to_list),
         ),
-        state=AdminTestsSG.test_detail,
+        state=SharedTestsSG.test_detail,
         getter=get_test_detail,
     ),
     Window(
@@ -476,7 +477,7 @@ tests_dialog = Dialog(
             Button(Const("📅 Срок действия"), id="edit_expires", on_click=on_edit_expires),
             Button(Const("◀️ Назад"), id="back", on_click=on_back_to_detail),
         ),
-        state=AdminTestsSG.edit_menu,
+        state=SharedTestsSG.edit_menu,
     ),
     Window(
         Const("<b>🔑 Изменение пароля</b>\n\n💬 <b>Введите новый пароль</b> или удалите текущий:\n<i>(максимум 255 символов)</i>"),
@@ -485,7 +486,7 @@ tests_dialog = Dialog(
             Button(Const("🗑 Удалить пароль"), id="remove_password", on_click=on_remove_password),
             Button(Const("◀️ Назад"), id="back", on_click=on_back_to_edit_menu),
         ),
-        state=AdminTestsSG.edit_password,
+        state=SharedTestsSG.edit_password,
     ),
     Window(
         Const("<b>🔄 Изменение количества попыток</b>\n\n🔢 <b>Введите новое количество попыток</b> (1-100) или удалите ограничение:"),
@@ -494,7 +495,7 @@ tests_dialog = Dialog(
             Button(Const("🗑 Без ограничений"), id="remove_attempts", on_click=on_remove_attempts),
             Button(Const("◀️ Назад"), id="back", on_click=on_back_to_edit_menu),
         ),
-        state=AdminTestsSG.edit_attempts,
+        state=SharedTestsSG.edit_attempts,
     ),
     Window(
         Const("<b>👥 Изменение группы</b>\n\n🎓 <b>Выберите группу</b> или удалите привязку:"),
@@ -514,7 +515,7 @@ tests_dialog = Dialog(
             Button(Const("🗑 Для всех групп"), id="remove_group", on_click=on_remove_group),
             Button(Const("◀️ Назад"), id="back", on_click=on_back_to_edit_menu),
         ),
-        state=AdminTestsSG.edit_group,
+        state=SharedTestsSG.edit_group,
         getter=get_groups_for_edit,
     ),
     Window(
@@ -524,7 +525,7 @@ tests_dialog = Dialog(
             Button(Const("🗑 Удалить срок"), id="remove_expires", on_click=on_remove_expires),
             Button(Const("◀️ Назад"), id="back", on_click=on_back_to_edit_menu),
         ),
-        state=AdminTestsSG.edit_expires,
+        state=SharedTestsSG.edit_expires,
     ),
     Window(
         Format("<b>📊 Статистика теста</b>\n\nПрошли тест: {count}"),
@@ -544,13 +545,13 @@ tests_dialog = Dialog(
             Button(Const("🔄 Обновить"), id="refresh", on_click=on_statistics),
             Button(Const("◀️ Назад"), id="back", on_click=on_back_to_detail),
         ),
-        state=AdminTestsSG.statistics,
+        state=SharedTestsSG.statistics,
         getter=get_statistics_data,
     ),
     Window(
         Format("{attempt_info}"),
         Button(Const("◀️ Назад"), id="back", on_click=on_back_to_statistics),
-        state=AdminTestsSG.attempt_detail,
+        state=SharedTestsSG.attempt_detail,
         getter=get_attempt_detail,
     ),
 )

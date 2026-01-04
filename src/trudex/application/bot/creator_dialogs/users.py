@@ -2,14 +2,14 @@ import asyncio
 
 from aiogram import Bot
 from aiogram.types import CallbackQuery, Message
-from aiogram_dialog import Dialog, DialogManager, StartMode, Window
+from aiogram_dialog import Dialog, DialogManager, Window
 from aiogram_dialog.widgets.input import MessageInput
 from aiogram_dialog.widgets.kbd import Button, Column, Row, ScrollingGroup, Select, SwitchTo
 from aiogram_dialog.widgets.text import Const, Format
 from dishka import FromDishka
 from dishka.integrations.aiogram_dialog import inject
 
-from trudex.application.bot.creator_dialogs.states import CreatorMenuSG, CreatorUsersSG
+from trudex.application.bot.creator_dialogs.states import CreatorUsersSG
 from trudex.infrastructure.database.dao.user import UserDAO
 from trudex.infrastructure.database.repo.user import UserRepository
 from trudex.infrastructure.utils.bot_commands import setup_bot_commands
@@ -19,7 +19,7 @@ from trudex.infrastructure.utils.config import Config
 @inject
 async def get_users_data(user_dao: FromDishka[UserDAO], **_kwargs):
     users = await user_dao.get_all()
-    users_sorted = sorted(users, key=lambda u: u.created_at, reverse=True)
+    users_sorted = sorted(users, key=lambda u: u.created_at or u.id, reverse=True)
     
     return {
         "users": [
@@ -206,10 +206,10 @@ async def on_confirm_no(_callback: CallbackQuery, _button: Button, manager: Dial
 
 
 async def on_back_to_main(_callback: CallbackQuery, _button: Button, manager: DialogManager):
-    await manager.start(CreatorMenuSG.main, mode=StartMode.RESET_STACK)
+    await manager.done()
 
 
-users_dialog = Dialog(
+creator_users_dialog = Dialog(
     Window(
         Format("<b>👥 Пользователи</b>\n\nВсего: {count}"),
         ScrollingGroup(

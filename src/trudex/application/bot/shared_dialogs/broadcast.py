@@ -1,12 +1,12 @@
 from aiogram.types import CallbackQuery, Message
-from aiogram_dialog import Dialog, DialogManager, StartMode, Window
+from aiogram_dialog import Dialog, DialogManager, Window
 from aiogram_dialog.widgets.input import MessageInput
 from aiogram_dialog.widgets.kbd import Button, Row
 from aiogram_dialog.widgets.text import Const
 from dishka import FromDishka
 from dishka.integrations.aiogram_dialog import inject
 
-from trudex.application.bot.admin_dialogs.states import AdminBroadcastSG, AdminMenuSG
+from trudex.application.bot.shared_dialogs.states import SharedBroadcastSG
 from trudex.infrastructure.database.dao.user import UserDAO
 from trudex.infrastructure.utils.broadcast import broadcast_message
 
@@ -14,7 +14,7 @@ from trudex.infrastructure.utils.broadcast import broadcast_message
 async def on_broadcast_input(message: Message, _widget: MessageInput, manager: DialogManager):
     manager.dialog_data["broadcast_message_id"] = message.message_id
     manager.dialog_data["broadcast_chat_id"] = message.chat.id
-    await manager.switch_to(AdminBroadcastSG.broadcast_confirm)
+    await manager.switch_to(SharedBroadcastSG.broadcast_confirm)
 
 
 @inject
@@ -48,19 +48,19 @@ async def on_broadcast_confirm(_callback: CallbackQuery, _button: Button, manage
 
 async def on_broadcast_cancel(_callback: CallbackQuery, _button: Button, manager: DialogManager):
     await _callback.answer("Рассылка отменена")
-    await manager.start(AdminMenuSG.main, mode=StartMode.RESET_STACK)
+    await manager.done()
 
 
 async def on_back_to_main(_callback: CallbackQuery, _button: Button, manager: DialogManager):
-    await manager.start(AdminMenuSG.main, mode=StartMode.RESET_STACK)
+    await manager.done()
 
 
-broadcast_dialog = Dialog(
+shared_broadcast_dialog = Dialog(
     Window(
         Const("<b>📢 Рассылка</b>\n\nОтправьте сообщение, которое хотите разослать всем пользователям:"),
         MessageInput(on_broadcast_input),
         Button(Const("◀️ Отмена"), id="back", on_click=on_back_to_main),
-        state=AdminBroadcastSG.broadcast_input,
+        state=SharedBroadcastSG.broadcast_input,
     ),
     Window(
         Const("<b>⚠️ Подтверждение рассылки</b>\n\nВы уверены, что хотите отправить это сообщение всем пользователям?"),
@@ -68,6 +68,6 @@ broadcast_dialog = Dialog(
             Button(Const("✅ Да"), id="broadcast_confirm", on_click=on_broadcast_confirm),
             Button(Const("❌ Нет"), id="broadcast_cancel", on_click=on_broadcast_cancel),
         ),
-        state=AdminBroadcastSG.broadcast_confirm,
+        state=SharedBroadcastSG.broadcast_confirm,
     ),
 )

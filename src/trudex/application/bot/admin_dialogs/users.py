@@ -1,25 +1,26 @@
 from aiogram.types import CallbackQuery, Message
-from aiogram_dialog import Dialog, DialogManager, StartMode, Window
+from aiogram_dialog import Dialog, DialogManager, Window
 from aiogram_dialog.widgets.input import MessageInput
 from aiogram_dialog.widgets.kbd import Button, Column, ScrollingGroup, Select, SwitchTo
 from aiogram_dialog.widgets.text import Const, Format
 from dishka import FromDishka
 from dishka.integrations.aiogram_dialog import inject
 
-from trudex.application.bot.admin_dialogs.states import AdminMenuSG, AdminUsersSG
+from trudex.application.bot.admin_dialogs.states import AdminUsersSG
 from trudex.infrastructure.database.dao.user import UserDAO
 
 
 @inject
 async def get_users_data(user_dao: FromDishka[UserDAO], **_kwargs):
     users = await user_dao.get_all()
+    users_sorted = sorted(users, key=lambda u: u.created_at or u.id, reverse=True)
     
     return {
         "users": [
-            (f"{u.name or u.first_name} (@{u.username or 'нет'})", u.id)
-            for u in users
+            (f"{'👑 ' if u.is_admin else ''}{u.name or u.first_name} (@{u.username or 'нет'})", u.id)
+            for u in users_sorted
         ],
-        "count": len(users),
+        "count": len(users_sorted),
     }
 
 
@@ -34,7 +35,6 @@ async def get_user_detail_data(dialog_manager: DialogManager, user_dao: FromDish
         return {"user_info": "Пользователь не найден"}
     
     username_str = f"@{user.username}" if user.username else "—"
-    last_name_str = user.last_name or "—"
     name_str = user.name or "—"
     group_str = str(user.group) if user.group else "—"
     admin_status = "✅ Да" if user.is_admin else "❌ Нет"
@@ -42,8 +42,7 @@ async def get_user_detail_data(dialog_manager: DialogManager, user_dao: FromDish
     user_info = (
         f"<b>👤 Информация о пользователе</b>\n\n"
         f"<b>ID:</b> <code>{user.id}</code>\n"
-        f"<b>Имя:</b> {user.first_name}\n"
-        f"<b>Фамилия:</b> {last_name_str}\n"
+        f"<b>Ник:</b> {user.first_name}\n"
         f"<b>Имя и фамилия:</b> {name_str}\n"
         f"<b>Username:</b> {username_str}\n"
         f"<b>Группа:</b> {group_str}\n"
@@ -83,10 +82,10 @@ async def on_user_input(message: Message, _widget: MessageInput, manager: Dialog
 
 
 async def on_back_to_main(_callback: CallbackQuery, _button: Button, manager: DialogManager):
-    await manager.start(AdminMenuSG.main, mode=StartMode.RESET_STACK)
+    await manager.done()
 
 
-users_dialog = Dialog(
+admin_users_dialog = Dialog(
     Window(
         Format("<b>👥 Пользователи</b>\n\nВсего: {count}"),
         ScrollingGroup(
