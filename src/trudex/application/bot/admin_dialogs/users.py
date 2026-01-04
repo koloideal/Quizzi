@@ -1,14 +1,12 @@
 from aiogram.types import CallbackQuery, Message
 from aiogram_dialog import Dialog, DialogManager, StartMode, Window
 from aiogram_dialog.widgets.input import MessageInput
-from aiogram_dialog.widgets.kbd import (Button, Column, ScrollingGroup, Select,
-                                        SwitchTo)
+from aiogram_dialog.widgets.kbd import Button, Column, ScrollingGroup, Select, SwitchTo
 from aiogram_dialog.widgets.text import Const, Format
 from dishka import FromDishka
 from dishka.integrations.aiogram_dialog import inject
 
-from trudex.application.bot.admin_dialogs.states import (AdminMenuSG,
-                                                         AdminUsersSG)
+from trudex.application.bot.admin_dialogs.states import AdminMenuSG, AdminUsersSG
 from trudex.infrastructure.database.dao.user import UserDAO
 
 

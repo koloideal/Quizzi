@@ -9,42 +9,26 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from dishka import make_async_container
 from dishka.integrations.aiogram import setup_dishka
 
-from trudex.application.bot.admin_dialogs.broadcast import \
-    broadcast_dialog as admin_broadcast_dialog
-from trudex.application.bot.admin_dialogs.create_test import \
-    admin_create_test_dialog
-from trudex.application.bot.admin_dialogs.groups import \
-    groups_dialog as admin_groups_dialog
+from trudex.application.bot.admin_dialogs.broadcast import broadcast_dialog as admin_broadcast_dialog
+from trudex.application.bot.admin_dialogs.create_test import admin_create_test_dialog
+from trudex.application.bot.admin_dialogs.groups import groups_dialog as admin_groups_dialog
 from trudex.application.bot.admin_dialogs.main_menu import admin_menu_dialog
-from trudex.application.bot.admin_dialogs.templates import \
-    templates_dialog as admin_templates_dialog
-from trudex.application.bot.admin_dialogs.tests import \
-    tests_dialog as admin_tests_dialog
-from trudex.application.bot.admin_dialogs.users import \
-    users_dialog as admin_users_dialog
-from trudex.application.bot.creator_dialogs.broadcast import \
-    broadcast_dialog as creator_broadcast_dialog
-from trudex.application.bot.creator_dialogs.create_test import \
-    create_test_dialog
-from trudex.application.bot.creator_dialogs.groups import \
-    groups_dialog as creator_groups_dialog
-from trudex.application.bot.creator_dialogs.main_menu import \
-    creator_menu_dialog
-from trudex.application.bot.creator_dialogs.templates import \
-    templates_dialog as creator_templates_dialog
-from trudex.application.bot.creator_dialogs.tests import \
-    tests_dialog as creator_tests_dialog
-from trudex.application.bot.creator_dialogs.users import \
-    users_dialog as creator_users_dialog
+from trudex.application.bot.admin_dialogs.templates import templates_dialog as admin_templates_dialog
+from trudex.application.bot.admin_dialogs.tests import tests_dialog as admin_tests_dialog
+from trudex.application.bot.admin_dialogs.users import users_dialog as admin_users_dialog
+from trudex.application.bot.creator_dialogs.broadcast import broadcast_dialog as creator_broadcast_dialog
+from trudex.application.bot.creator_dialogs.create_test import create_test_dialog
+from trudex.application.bot.creator_dialogs.groups import groups_dialog as creator_groups_dialog
+from trudex.application.bot.creator_dialogs.main_menu import creator_menu_dialog
+from trudex.application.bot.creator_dialogs.templates import templates_dialog as creator_templates_dialog
+from trudex.application.bot.creator_dialogs.tests import tests_dialog as creator_tests_dialog
+from trudex.application.bot.creator_dialogs.users import users_dialog as creator_users_dialog
 from trudex.application.bot.handlers import router
-from trudex.application.bot.middlewares.reject_not_admin import \
-    RejectNotAdminMiddleware
-from trudex.application.bot.middlewares.reject_not_creator import \
-    RejectNotCreatorMiddleware
+from trudex.application.bot.middlewares.reject_not_admin import RejectNotAdminMiddleware
+from trudex.application.bot.middlewares.reject_not_creator import RejectNotCreatorMiddleware
 from trudex.application.bot.user_dialogs.deeplink import deeplink_dialog
 from trudex.application.bot.user_dialogs.main_menu import user_menu_dialog
-from trudex.application.bot.user_dialogs.registration import \
-    registration_dialog
+from trudex.application.bot.user_dialogs.registration import registration_dialog
 from trudex.application.bot.user_dialogs.take_test import take_test_dialog
 from trudex.infrastructure.database.repo.user import UserRepository
 from trudex.infrastructure.di import DatabaseProvider, SchedulerProvider
@@ -99,8 +83,6 @@ async def main() -> None:
     )
     setup_dialogs(dp)
     setup_dishka(container, dp, auto_inject=True)
-
-    bott = await container.get(Bot)
     
     async with container() as request_container:
         user_repo = await request_container.get(UserRepository)

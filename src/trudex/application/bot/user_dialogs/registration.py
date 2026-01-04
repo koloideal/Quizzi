@@ -6,11 +6,7 @@ from aiogram_dialog.widgets.text import Const, Format
 from dishka import FromDishka
 from dishka.integrations.aiogram_dialog import inject
 
-from trudex.application.bot.user_dialogs.states import (
-    UserDeeplinkSG,
-    UserMenuSG,
-    UserRegistrationSG,
-)
+from trudex.application.bot.user_dialogs.states import UserDeeplinkSG, UserMenuSG, UserRegistrationSG
 from trudex.infrastructure.database.dao.group import GroupDAO
 from trudex.infrastructure.database.dao.user import UserDAO
 

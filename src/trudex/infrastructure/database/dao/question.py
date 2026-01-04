@@ -2,8 +2,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from trudex.domain.schemas import Question as DomainQuestion
+from trudex.domain.schemas import QuestionType
 from trudex.infrastructure.database.dto.question import QuestionDTO
-from trudex.infrastructure.database.models import Question, QuestionType
+from trudex.infrastructure.database.models import Question
 
 
 class QuestionDAO:
@@ -27,14 +28,16 @@ class QuestionDAO:
         test_id: int,
         text: str,
         position: int = 0,
-        question_type: str = "single",
+        question_type: str | QuestionType = QuestionType.SINGLE,
         tg_file_id: str | None = None,
     ) -> DomainQuestion:
+        if isinstance(question_type, str):
+            question_type = QuestionType(question_type)
         question = Question(
             test_id=test_id,
             text=text,
             position=position,
-            question_type=QuestionType(question_type),
+            question_type=question_type,
             tg_file_id=tg_file_id,
         )
         self.session.add(question)
@@ -47,7 +50,7 @@ class QuestionDAO:
         question_id: int,
         text: str | None = None,
         position: int | None = None,
-        question_type: str | None = None,
+        question_type: str | QuestionType | None = None,
         tg_file_id: str | None = None,
     ) -> DomainQuestion | None:
         result = await self.session.execute(
@@ -62,7 +65,9 @@ class QuestionDAO:
         if position is not None:
             question.position = position
         if question_type is not None:
-            question.question_type = QuestionType(question_type)
+            if isinstance(question_type, str):
+                question_type = QuestionType(question_type)
+            question.question_type = question_type
         if tg_file_id is not None:
             question.tg_file_id = tg_file_id
         

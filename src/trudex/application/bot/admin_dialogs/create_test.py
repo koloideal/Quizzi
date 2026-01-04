@@ -3,14 +3,12 @@ from datetime import date, datetime, time
 from aiogram.types import CallbackQuery, ContentType, Message
 from aiogram_dialog import Dialog, DialogManager, StartMode, Window
 from aiogram_dialog.widgets.input import MessageInput
-from aiogram_dialog.widgets.kbd import (Button, Calendar, Cancel, Column, Row,
-                                        ScrollingGroup, Select)
+from aiogram_dialog.widgets.kbd import Button, Calendar, Cancel, Column, Row, ScrollingGroup, Select
 from aiogram_dialog.widgets.text import Const, Format
 from dishka import FromDishka
 from dishka.integrations.aiogram_dialog import inject
 
-from trudex.application.bot.admin_dialogs.states import (AdminCreateTestSG,
-                                                         AdminTestsSG)
+from trudex.application.bot.admin_dialogs.states import AdminCreateTestSG, AdminTestsSG
 from trudex.infrastructure.database.dao.group import GroupDAO
 from trudex.infrastructure.database.dao.option import OptionDAO
 from trudex.infrastructure.database.dao.question import QuestionDAO

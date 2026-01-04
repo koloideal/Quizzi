@@ -12,6 +12,6 @@ class QuestionDTO:
             test_id=self.model.test_id,
             text=self.model.text,
             position=self.model.position,
-            question_type=self.model.question_type.value,
+            question_type=self.model.question_type,
             tg_file_id=self.model.tg_file_id,
         )

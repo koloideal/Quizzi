@@ -1,5 +1,7 @@
+import logging
+
 from aiogram import Router
-from aiogram.filters import Command, CommandStart, CommandObject
+from aiogram.filters import Command, CommandObject, CommandStart
 from aiogram.types import ErrorEvent, Message
 from aiogram_dialog import DialogManager, StartMode
 from aiogram_dialog.api.exceptions import OutdatedIntent, UnknownIntent
@@ -7,11 +9,7 @@ from dishka.integrations.aiogram import FromDishka
 
 from trudex.application.bot.admin_dialogs.states import AdminMenuSG
 from trudex.application.bot.creator_dialogs.states import CreatorMenuSG
-from trudex.application.bot.user_dialogs.states import (
-    UserDeeplinkSG,
-    UserMenuSG,
-    UserRegistrationSG,
-)
+from trudex.application.bot.user_dialogs.states import UserDeeplinkSG, UserMenuSG, UserRegistrationSG
 from trudex.infrastructure.database.dao.group import GroupDAO
 from trudex.infrastructure.database.dao.test import TestDAO
 from trudex.infrastructure.database.dao.user import UserDAO
@@ -20,6 +18,7 @@ from trudex.infrastructure.utils.test_id_to_hash import decode_id
 from trudex.infrastructure.utils.timezone import now_msk_naive
 
 router = Router()
+logger = logging.getLogger(__name__)
 
 
 async def ensure_user_registered(
@@ -115,6 +114,13 @@ async def start_with_deeplink(
     assert message.from_user is not None
     
     deeplink = command.args
+    logger.info(
+        "Deeplink start: user_id=%d, username=%s, deeplink=%s",
+        message.from_user.id,
+        message.from_user.username,
+        deeplink,
+    )
+    
     if not deeplink:
         await start_handler(message, user_dao, group_dao, dialog_manager)
         return
@@ -122,6 +128,7 @@ async def start_with_deeplink(
     try:
         test_id = decode_id(deeplink, config.security.encode_key)
     except (ValueError, IndexError):
+        logger.warning("Invalid deeplink: user_id=%d, deeplink=%s", message.from_user.id, deeplink)
         await message.answer("❌ Неверная ссылка на тест")
         await start_handler(message, user_dao, group_dao, dialog_manager)
         return
@@ -138,6 +145,12 @@ async def start_with_deeplink(
     )
     
     if not is_valid:
+        logger.info(
+            "Test validation failed: user_id=%d, test_id=%d, error=%s",
+            message.from_user.id,
+            test_id,
+            error,
+        )
         await dialog_manager.start(
             UserDeeplinkSG.test_preview,
             mode=StartMode.RESET_STACK,
@@ -145,6 +158,7 @@ async def start_with_deeplink(
         )
         return
     
+    logger.info("User starting test via deeplink: user_id=%d, test_id=%d", message.from_user.id, test_id)
     await dialog_manager.start(
         UserDeeplinkSG.test_preview,
         mode=StartMode.RESET_STACK,
@@ -159,6 +173,13 @@ async def start_handler(
     user_dao: FromDishka[UserDAO],
     group_dao: FromDishka[GroupDAO],
 ) -> None:
+    assert message.from_user is not None
+    logger.info(
+        "Start command: user_id=%d, username=%s",
+        message.from_user.id,
+        message.from_user.username,
+    )
+    
     is_registered = await ensure_user_registered(
         user_dao, group_dao, message, dialog_manager
     )
@@ -169,15 +190,22 @@ async def start_handler(
 
 @router.message(Command("admin"))
 async def admin_command(_message: Message, dialog_manager: DialogManager) -> None:
+    assert _message.from_user is not None
+    logger.info("Admin panel access: user_id=%d", _message.from_user.id)
     await dialog_manager.start(AdminMenuSG.main, mode=StartMode.RESET_STACK)
 
 
 @router.message(Command("creator"))
 async def creator_command(_message: Message, dialog_manager: DialogManager) -> None:
+    assert _message.from_user is not None
+    logger.info("Creator panel access: user_id=%d", _message.from_user.id)
     await dialog_manager.start(CreatorMenuSG.main, mode=StartMode.RESET_STACK)
 
 
 @router.error()
 async def dialog_error_handler(event: ErrorEvent, dialog_manager: DialogManager) -> None:
     if isinstance(event.exception, (UnknownIntent, OutdatedIntent)):
+        logger.debug("Dialog intent error, resetting to main menu: %s", type(event.exception).__name__)
         await dialog_manager.start(UserMenuSG.main, mode=StartMode.RESET_STACK)
+    else:
+        logger.exception("Unhandled error in dialog: %s", event.exception)

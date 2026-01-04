@@ -6,15 +6,12 @@ from aiogram import Bot
 from aiogram.types import BufferedInputFile, CallbackQuery, Message
 from aiogram_dialog import Dialog, DialogManager, StartMode, Window
 from aiogram_dialog.widgets.input import MessageInput
-from aiogram_dialog.widgets.kbd import (Button, Calendar, Column,
-                                        ScrollingGroup, Select)
+from aiogram_dialog.widgets.kbd import Button, Calendar, Column, ScrollingGroup, Select
 from aiogram_dialog.widgets.text import Const, Format
 from dishka import FromDishka
 from dishka.integrations.aiogram_dialog import inject
 
-from trudex.application.bot.admin_dialogs.states import (AdminMenuSG,
-                                                         AdminTestsSG,
-                                                         AdminCreateTestSG)
+from trudex.application.bot.admin_dialogs.states import AdminCreateTestSG, AdminMenuSG, AdminTestsSG
 from trudex.infrastructure.database.dao.group import GroupDAO
 from trudex.infrastructure.database.dao.test import TestDAO
 from trudex.infrastructure.database.repo.test import TestRepository

@@ -30,6 +30,9 @@ dev = [
 [tool.pyright]
 typeCheckingMode = "standard"
 
+[tool.isort]
+line_length = 110
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"

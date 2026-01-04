@@ -1,10 +1,13 @@
 import asyncio
+import logging
 from dataclasses import dataclass
 
 from aiogram import Bot
 from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
 
 from trudex.infrastructure.database.dao.user import UserDAO
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -19,17 +22,20 @@ async def broadcast_message(bot: Bot, message_id: int, chat_id: int, user_dao: U
     success = 0
     failed = 0
     
+    logger.info("Starting broadcast: message_id=%d, total_users=%d", message_id, len(users))
+    
     for user in users:
         try:
             await bot.copy_message(chat_id=user.id, from_chat_id=chat_id, message_id=message_id)
             success += 1
         except TelegramForbiddenError:
+            logger.debug("Broadcast failed (forbidden): user_id=%d", user.id)
             failed += 1
-        except TelegramBadRequest:
-            failed += 1
-        except Exception:
+        except TelegramBadRequest as e:
+            logger.debug("Broadcast failed (bad request): user_id=%d, error=%s", user.id, e)
             failed += 1
         
         await asyncio.sleep(0.1)
     
+    logger.info("Broadcast completed: success=%d, failed=%d, total=%d", success, failed, len(users))
     return BroadcastStats(success=success, failed=failed, total=len(users))

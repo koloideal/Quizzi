@@ -1,10 +1,10 @@
 from datetime import datetime
-from enum import Enum
 from typing import final
 
-from sqlalchemy import (BigInteger, CheckConstraint, ForeignKey, Integer,
-                        String, Text, func)
+from sqlalchemy import BigInteger, CheckConstraint, ForeignKey, Integer, String, Text, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+
+from trudex.domain.schemas import QuestionType
 
 
 class Base(DeclarativeBase):
@@ -40,15 +40,6 @@ class Group(Base):
     __table_args__ = (
         CheckConstraint("number >= 1000 AND number <= 9999", name="check_group_number"),
     )
-    __table_args__ = (
-        CheckConstraint("number >= 1000 AND number <= 9999", name="check_group_number"),
-    )
-
-
-class QuestionType(str, Enum):
-    SINGLE = "single"
-    MULTIPLE = "multiple"
-    INPUT = "input"
 
 
 @final

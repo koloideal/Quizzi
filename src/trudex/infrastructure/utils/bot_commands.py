@@ -1,6 +1,5 @@
 from aiogram import Bot
-from aiogram.types import (BotCommand, BotCommandScopeAllPrivateChats,
-                           BotCommandScopeChat)
+from aiogram.types import BotCommand, BotCommandScopeAllPrivateChats, BotCommandScopeChat
 
 from trudex.infrastructure.database.repo.user import UserRepository
 from trudex.infrastructure.utils.config import Config

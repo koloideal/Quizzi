@@ -1,5 +1,12 @@
 from dataclasses import dataclass
 from datetime import datetime
+from enum import Enum
+
+
+class QuestionType(str, Enum):
+    SINGLE = "single"
+    MULTIPLE = "multiple"
+    INPUT = "input"
 
 
 @dataclass
@@ -46,7 +53,7 @@ class Question:
     test_id: int
     text: str
     position: int = 0
-    question_type: str = "single"
+    question_type: QuestionType = QuestionType.SINGLE
     tg_file_id: str | None = None
 
 

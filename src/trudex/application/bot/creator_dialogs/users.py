@@ -4,14 +4,12 @@ from aiogram import Bot
 from aiogram.types import CallbackQuery, Message
 from aiogram_dialog import Dialog, DialogManager, StartMode, Window
 from aiogram_dialog.widgets.input import MessageInput
-from aiogram_dialog.widgets.kbd import (Button, Column, Row, ScrollingGroup,
-                                        Select, SwitchTo)
+from aiogram_dialog.widgets.kbd import Button, Column, Row, ScrollingGroup, Select, SwitchTo
 from aiogram_dialog.widgets.text import Const, Format
 from dishka import FromDishka
 from dishka.integrations.aiogram_dialog import inject
 
-from trudex.application.bot.creator_dialogs.states import (CreatorMenuSG,
-                                                           CreatorUsersSG)
+from trudex.application.bot.creator_dialogs.states import CreatorMenuSG, CreatorUsersSG
 from trudex.infrastructure.database.dao.user import UserDAO
 from trudex.infrastructure.database.repo.user import UserRepository
 from trudex.infrastructure.utils.bot_commands import setup_bot_commands

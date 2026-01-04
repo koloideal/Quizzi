@@ -8,6 +8,14 @@ from trudex.infrastructure.database.dto.user import UserDTO
 from trudex.infrastructure.database.models import User
 
 
+class _UNSET:
+    """Sentinel для различения None и "не передано"."""
+    pass
+
+
+UNSET = _UNSET()
+
+
 class UserDAO:
     def __init__(self, session: AsyncSession) -> None:
         self.session: AsyncSession = session
@@ -53,14 +61,14 @@ class UserDAO:
     async def update(
         self,
         user_id: int,
-        username: str | None = None,
-        first_name: str | None = None,
-        last_name: str | None = None,
-        name: str | None = None,
-        group: int | None = None,
-        is_admin: bool | None = None,
-        name_updated_at: datetime | None = None,
-        group_updated_at: datetime | None = None,
+        username: str | None | _UNSET = UNSET,
+        first_name: str | _UNSET = UNSET,
+        last_name: str | None | _UNSET = UNSET,
+        name: str | None | _UNSET = UNSET,
+        group: int | None | _UNSET = UNSET,
+        is_admin: bool | _UNSET = UNSET,
+        name_updated_at: datetime | None | _UNSET = UNSET,
+        group_updated_at: datetime | None | _UNSET = UNSET,
     ) -> DomainUser | None:
         result = await self.session.execute(
             select(User).where(User.id == user_id)
@@ -69,21 +77,21 @@ class UserDAO:
         if not user:
             return None
         
-        if username is not None:
+        if not isinstance(username, _UNSET):
             user.username = username
-        if first_name is not None:
+        if not isinstance(first_name, _UNSET):
             user.first_name = first_name
-        if last_name is not None:
+        if not isinstance(last_name, _UNSET):
             user.last_name = last_name
-        if name is not None:
+        if not isinstance(name, _UNSET):
             user.name = name
-        if group is not None:
+        if not isinstance(group, _UNSET):
             user.group = group
-        if is_admin is not None:
+        if not isinstance(is_admin, _UNSET):
             user.is_admin = is_admin
-        if name_updated_at is not None:
+        if not isinstance(name_updated_at, _UNSET):
             user.name_updated_at = name_updated_at
-        if group_updated_at is not None:
+        if not isinstance(group_updated_at, _UNSET):
             user.group_updated_at = group_updated_at
         
         await self.session.flush()
@@ -108,9 +116,9 @@ class UserDAO:
         first_name: str,
         username: str | None = None,
         last_name: str | None = None,
-        name: str | None = None,
-        group: int | None = None,
-        is_admin: bool | None = None,
+        name: str | None | _UNSET = UNSET,
+        group: int | None | _UNSET = UNSET,
+        is_admin: bool | _UNSET = UNSET,
     ) -> DomainUser:
         result = await self.session.execute(
             select(User).where(User.id == user_id)
@@ -118,17 +126,14 @@ class UserDAO:
         user = result.scalar_one_or_none()
         
         if user:
-            if username is not None:
-                user.username = username
-            if first_name is not None:
-                user.first_name = first_name
-            if last_name is not None:
-                user.last_name = last_name
-            if name is not None:
+            user.username = username
+            user.first_name = first_name
+            user.last_name = last_name
+            if not isinstance(name, _UNSET):
                 user.name = name
-            if group is not None:
+            if not isinstance(group, _UNSET):
                 user.group = group
-            if is_admin is not None:
+            if not isinstance(is_admin, _UNSET):
                 user.is_admin = is_admin
             await self.session.flush()
             await self.session.refresh(user)
@@ -139,7 +144,7 @@ class UserDAO:
             username=username,
             first_name=first_name,
             last_name=last_name,
-            name=name,
-            group=group,
-            is_admin=is_admin or False,
+            name=name if not isinstance(name, _UNSET) else None,
+            group=group if not isinstance(group, _UNSET) else None,
+            is_admin=is_admin if not isinstance(is_admin, _UNSET) else False,
         )

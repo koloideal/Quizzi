@@ -7,9 +7,9 @@ from dishka import FromDishka
 from dishka.integrations.aiogram_dialog import inject
 
 from trudex.application.bot.user_dialogs.states import UserMenuSG, UserTestSG
+from trudex.domain.schemas import QuestionType
 from trudex.infrastructure.database.dao.test import TestDAO
 from trudex.infrastructure.database.dao.user_answer import UserAnswerDAO
-from trudex.infrastructure.database.models import QuestionType
 from trudex.infrastructure.database.repo.test import TestRepository
 from trudex.infrastructure.database.repo.test_attempt import TestAttemptRepository
 from trudex.infrastructure.utils.timezone import now_msk_naive

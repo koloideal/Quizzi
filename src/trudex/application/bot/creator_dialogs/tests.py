@@ -8,16 +8,13 @@ from aiogram.types import BufferedInputFile, CallbackQuery, Message
 from aiogram_dialog import Dialog, DialogManager, StartMode, Window
 from aiogram_dialog.api.entities import MediaAttachment
 from aiogram_dialog.widgets.input import MessageInput
-from aiogram_dialog.widgets.kbd import (Button, Calendar, Column, Row,
-                                        ScrollingGroup, Select)
+from aiogram_dialog.widgets.kbd import Button, Calendar, Column, Row, ScrollingGroup, Select
 from aiogram_dialog.widgets.media import DynamicMedia
 from aiogram_dialog.widgets.text import Const, Format
 from dishka import FromDishka
 from dishka.integrations.aiogram_dialog import inject
 
-from trudex.application.bot.creator_dialogs.states import (CreateTestSG,
-                                                           CreatorMenuSG,
-                                                           CreatorTestsSG)
+from trudex.application.bot.creator_dialogs.states import CreateTestSG, CreatorMenuSG, CreatorTestsSG
 from trudex.infrastructure.database.dao.group import GroupDAO
 from trudex.infrastructure.database.dao.test import TestDAO
 from trudex.infrastructure.database.repo.test import TestRepository

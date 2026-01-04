@@ -6,8 +6,7 @@ from aiogram_dialog.widgets.text import Const
 from dishka import FromDishka
 from dishka.integrations.aiogram_dialog import inject
 
-from trudex.application.bot.admin_dialogs.states import (AdminBroadcastSG,
-                                                         AdminMenuSG)
+from trudex.application.bot.admin_dialogs.states import AdminBroadcastSG, AdminMenuSG
 from trudex.infrastructure.database.dao.user import UserDAO
 from trudex.infrastructure.utils.broadcast import broadcast_message
 

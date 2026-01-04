@@ -10,12 +10,12 @@ from dishka import FromDishka
 from dishka.integrations.aiogram_dialog import inject
 
 from trudex.application.bot.admin_dialogs.states import AdminMenuSG, AdminTemplatesSG, AdminTestsSG
+from trudex.domain.schemas import QuestionType
 from trudex.domain.test_parser import ParsedTest, TestParser
 from trudex.infrastructure.database.dao.option import OptionDAO
 from trudex.infrastructure.database.dao.question import QuestionDAO
 from trudex.infrastructure.database.dao.test import TestDAO
 from trudex.infrastructure.database.repo.test import TestRepository
-
 
 TEMPLATES_INFO = (
     "<b>📦 Шаблоны тестов</b>\n\n"
@@ -227,7 +227,7 @@ async def on_test_selected_for_export(
             "question_type": question.question_type,
         }
         
-        if question.question_type == "input":
+        if question.question_type == QuestionType.INPUT:
             correct_options = [o for o in options if o.is_correct]
             if correct_options:
                 question_data["correct_answer"] = correct_options[0].text

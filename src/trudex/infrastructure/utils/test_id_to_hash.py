@@ -1,7 +1,6 @@
-import hmac
 import hashlib
+import hmac
 import string
-
 
 ALPHABET = string.ascii_letters
 

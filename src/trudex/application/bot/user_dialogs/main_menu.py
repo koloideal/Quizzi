@@ -1,6 +1,6 @@
 import asyncio
 import functools
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from aiogram import Bot
 from aiogram.types import BufferedInputFile, CallbackQuery, Message
@@ -21,7 +21,6 @@ from trudex.infrastructure.utils.config import Config
 from trudex.infrastructure.utils.qr_generator import generate_qr_bytes
 from trudex.infrastructure.utils.test_id_to_hash import encode_id
 from trudex.infrastructure.utils.timezone import now_msk, now_msk_naive, to_msk
-from datetime import datetime
 
 
 def can_edit_field(updated_at: datetime | None) -> bool:
