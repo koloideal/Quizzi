@@ -1,17 +1,19 @@
 import asyncio
 import functools
+import json
 from datetime import date, datetime, time
 
 from aiogram import Bot
 from aiogram.types import BufferedInputFile, CallbackQuery, Message
 from aiogram_dialog import Dialog, DialogManager, StartMode, Window
 from aiogram_dialog.widgets.input import MessageInput
-from aiogram_dialog.widgets.kbd import Button, Calendar, Column, ScrollingGroup, Select
+from aiogram_dialog.widgets.kbd import Button, Calendar, Column, Row, ScrollingGroup, Select
 from aiogram_dialog.widgets.text import Const, Format
 from dishka import FromDishka
 from dishka.integrations.aiogram_dialog import inject
 
 from trudex.application.bot.shared_dialogs.states import SharedCreateTestSG, SharedTestsSG
+from trudex.domain.schemas import QuestionType
 from trudex.infrastructure.database.dao.group import GroupDAO
 from trudex.infrastructure.database.dao.test import TestDAO
 from trudex.infrastructure.database.repo.test import TestRepository
@@ -199,11 +201,16 @@ async def get_attempt_detail(
         "<b>📋 Ответы:</b>\n",
     ]
     
+    # Загружаем все вопросы с опциями за один запрос
+    question_ids = [answer.question_id for answer in answers]
+    questions_map = await test_repo.get_questions_with_options_by_ids(question_ids)
+    
     for i, answer in enumerate(answers, 1):
-        question, options = await test_repo.get_question_with_options(answer.question_id)
-        if not question:
+        question_data = questions_map.get(answer.question_id)
+        if not question_data:
             continue
         
+        question, options = question_data
         correct_options = [opt for opt in options if opt.is_correct]
         correct_texts = [opt.text for opt in correct_options]
         
@@ -219,6 +226,87 @@ async def get_attempt_detail(
         lines.append(f"✓ <i>Правильно:</i> {', '.join(correct_texts)}\n")
     
     return {"attempt_info": "\n".join(lines)}
+
+
+@inject
+async def on_export_test(
+    _callback: CallbackQuery,
+    _button: Button,
+    manager: DialogManager,
+    test_repo: FromDishka[TestRepository],
+) -> None:
+    test_id = manager.dialog_data.get("selected_test_id")
+    
+    if not test_id:
+        await _callback.answer("❌ Тест не найден")
+        return
+    
+    assert _callback.message is not None
+    await _callback.answer("⏳ Экспортирую тест...")
+    
+    test, questions_with_options = await test_repo.get_full_test(test_id)
+    
+    if not test:
+        await _callback.message.answer("❌ Тест не найден")
+        return
+    
+    export_data: dict = {
+        "title": test.title,
+        "description": test.description,
+        "password": test.password,
+        "attempts": test.attempts,
+        "expires_at": test.expires_at.isoformat() if test.expires_at else None,
+        "for_group": test.for_group,
+        "questions": [],
+    }
+    
+    questions_list: list = export_data["questions"]
+    
+    for question, options in questions_with_options:
+        question_data: dict = {
+            "question_type": question.question_type.value,
+            "question": question.text,
+        }
+        
+        if question.question_type == QuestionType.INPUT:
+            correct_options = [o for o in options if o.is_correct]
+            if correct_options:
+                question_data["correct_answer"] = correct_options[0].text
+        else:
+            question_data["answers"] = [
+                {"option": o.text, "is_correct": o.is_correct}
+                for o in options
+            ]
+        
+        questions_list.append(question_data)
+    
+    json_str = json.dumps(export_data, ensure_ascii=False, indent=2)
+    
+    created_str = test.created_at.strftime("%d.%m.%Y %H:%M") if test.created_at else "—"
+    updated_str = test.updated_at.strftime("%d.%m.%Y %H:%M") if test.updated_at else "—"
+    questions_count = len(questions_with_options)
+    
+    comment_header = f"""// ═══════════════════════════════════════════════════════════════
+// ЭКСПОРТ ТЕСТА: {test.title}
+// ═══════════════════════════════════════════════════════════════
+// 
+// ❓ Вопросов: {questions_count}
+// 📅 Создан: {created_str}
+// 🔄 Обновлён: {updated_str}
+// 
+// ═══════════════════════════════════════════════════════════════
+
+"""
+    
+    full_content = comment_header + json_str
+    
+    safe_title = "".join(c if c.isalnum() or c in "-_" else "_" for c in test.title)[:50]
+    filename = f"{safe_title}.json"
+    
+    await _callback.message.answer_document(
+        document=BufferedInputFile(full_content.encode("utf-8"), filename=filename),
+        caption=f"📤 <b>Экспорт теста:</b> {test.title}",
+    )
 
 
 @inject
@@ -462,6 +550,7 @@ shared_tests_dialog = Dialog(
             ),
             Button(Const("📊 Статистика"), id="statistics", on_click=on_statistics),
             Button(Const("🔗 Поделиться"), id="share", on_click=on_share_test),
+            Button(Const("📤 Экспорт"), id="export", on_click=on_export_test),
             Button(Const("✏️ Изменить"), id="edit_menu", on_click=on_edit_menu),
             Button(Const("◀️ Назад"), id="back", on_click=on_back_to_list),
         ),

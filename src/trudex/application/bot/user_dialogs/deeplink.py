@@ -11,6 +11,7 @@ from trudex.infrastructure.database.dao.test import TestDAO
 from trudex.infrastructure.database.models import QuestionType
 from trudex.infrastructure.database.repo.test import TestRepository
 from trudex.infrastructure.database.repo.test_attempt import TestAttemptRepository
+from trudex.infrastructure.utils.rate_limiter import PasswordRateLimiter
 
 
 @inject
@@ -60,6 +61,7 @@ async def on_start_deeplink_test(
     test_dao: FromDishka[TestDAO],
     test_repo: FromDishka[TestRepository],
     attempt_repo: FromDishka[TestAttemptRepository],
+    rate_limiter: FromDishka[PasswordRateLimiter],
 ):
     assert _callback.from_user is not None
     
@@ -89,6 +91,12 @@ async def on_start_deeplink_test(
         await attempt_repo.attempt_dao.delete(active_attempt.id)
     
     if test.password:
+        # Проверяем rate limit перед показом экрана ввода пароля
+        allowed, wait_time = await rate_limiter.check(user_id)
+        if not allowed:
+            minutes = int(wait_time // 60) + 1
+            await _callback.answer(f"⏳ Слишком много попыток. Подождите {minutes} мин.", show_alert=True)
+            return
         await manager.switch_to(UserDeeplinkSG.password_input)
     else:
         await start_test_without_password(manager, test_repo, attempt_repo, test_id, user_id)
@@ -141,6 +149,7 @@ async def on_deeplink_password_input(
     test_dao: FromDishka[TestDAO],
     test_repo: FromDishka[TestRepository],
     attempt_repo: FromDishka[TestAttemptRepository],
+    rate_limiter: FromDishka[PasswordRateLimiter],
 ):
     assert message.from_user is not None
     
@@ -164,7 +173,14 @@ async def on_deeplink_password_input(
             manager, test_repo, attempt_repo, test_id, message.from_user.id
         )
     else:
-        await message.answer("❌ Неверный пароль")
+        # Проверяем rate limit при неверном пароле
+        allowed, wait_time = await rate_limiter.check(message.from_user.id)
+        if not allowed:
+            minutes = int(wait_time // 60) + 1
+            await message.answer(f"❌ Неверный пароль\n⏳ Слишком много попыток. Подождите {minutes} мин.")
+            await manager.start(UserMenuSG.main, mode=StartMode.RESET_STACK)
+        else:
+            await message.answer("❌ Неверный пароль")
 
 
 async def on_back_to_menu(_callback: CallbackQuery, _button: Button, manager: DialogManager):

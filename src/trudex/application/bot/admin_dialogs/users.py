@@ -68,8 +68,7 @@ async def on_user_input(message: Message, _widget: MessageInput, manager: Dialog
     user = None
     if text.startswith("@"):
         username = text[1:]
-        all_users = await user_dao.get_all()
-        user = next((u for u in all_users if u.username == username), None)
+        user = await user_dao.get_by_username(username)
     elif text.isdigit():
         user = await user_dao.get_by_id(int(text))
     

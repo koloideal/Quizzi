@@ -18,12 +18,17 @@ from trudex.infrastructure.database.repo.test_attempt import TestAttemptReposito
 from trudex.infrastructure.database.repo.user import UserRepository
 from trudex.infrastructure.scheduling.tasks import deactivate_expired_tests
 from trudex.infrastructure.utils.config import Config
+from trudex.infrastructure.utils.rate_limiter import PasswordRateLimiter
 
 
 class DatabaseProvider(Provider):
     @provide(scope=Scope.APP)
     def get_session_maker(self, config: Config) -> async_sessionmaker[AsyncSession]:
         return new_session_maker(config.database.url)
+    
+    @provide(scope=Scope.APP)
+    def get_password_rate_limiter(self) -> PasswordRateLimiter:
+        return PasswordRateLimiter()
 
     @provide(scope=Scope.REQUEST)
     async def get_session(

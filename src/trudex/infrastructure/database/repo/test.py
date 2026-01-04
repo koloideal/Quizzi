@@ -122,6 +122,28 @@ class TestRepository:
         count = result.scalar_one()
         return count
     
+    async def get_questions_with_options_by_ids(
+        self, question_ids: list[int]
+    ) -> dict[int, tuple[Question, list[Option]]]:
+        """Загружает вопросы с опциями по списку ID за один запрос."""
+        if not question_ids:
+            return {}
+        
+        result = await self.session.execute(
+            select(QuestionModel)
+            .where(QuestionModel.id.in_(question_ids))
+            .options(selectinload(QuestionModel.options))
+        )
+        question_models = list(result.scalars().all())
+        
+        questions_dict: dict[int, tuple[Question, list[Option]]] = {}
+        for qm in question_models:
+            question = QuestionDTO(qm).to_domain()
+            options = [OptionDTO(o).to_domain() for o in qm.options]
+            questions_dict[qm.id] = (question, options)
+        
+        return questions_dict
+    
     async def duplicate_test(self, test_id: int, new_title: str) -> Test | None:
         test, questions_with_options = await self.get_full_test(test_id)
         if not test:

@@ -30,7 +30,6 @@ class RejectNotCreatorMiddleware(BaseMiddleware):
             if user_id == config.bot.creator_id:
                 return await handler(event, data)
             
-            await event.answer("У вас нет доступа к панели создателя.")
             return
         
         return await handler(event, data)

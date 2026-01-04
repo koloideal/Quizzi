@@ -155,18 +155,16 @@ class TestAttemptRepository:
         return [UserAnswerDTO(model).to_domain() for model in models]
     
     async def get_question_statistics(self, question_id: int) -> dict[str, int]:
-        total_result = await self.session.execute(
-            select(func.count(UserAnswerModel.id))
+        result = await self.session.execute(
+            select(
+                func.count(UserAnswerModel.id).label("total"),
+                func.sum(func.cast(UserAnswerModel.is_correct, func.Integer)).label("correct")
+            )
             .where(UserAnswerModel.question_id == question_id)
         )
-        total = total_result.scalar_one()
-        
-        correct_result = await self.session.execute(
-            select(func.count(UserAnswerModel.id))
-            .where(UserAnswerModel.question_id == question_id)
-            .where(UserAnswerModel.is_correct == True)
-        )
-        correct = correct_result.scalar_one()
+        row = result.one()
+        total = row.total or 0
+        correct = row.correct or 0
         
         return {
             "total_answers": total,

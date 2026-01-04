@@ -12,6 +12,7 @@ from trudex.infrastructure.database.dao.test import TestDAO
 from trudex.infrastructure.database.dao.user_answer import UserAnswerDAO
 from trudex.infrastructure.database.repo.test import TestRepository
 from trudex.infrastructure.database.repo.test_attempt import TestAttemptRepository
+from trudex.infrastructure.utils.rate_limiter import PasswordRateLimiter
 from trudex.infrastructure.utils.timezone import now_msk_naive
 
 
@@ -32,6 +33,7 @@ async def on_start_test(
     test_dao: FromDishka[TestDAO],
     test_repo: FromDishka[TestRepository],
     attempt_repo: FromDishka[TestAttemptRepository],
+    rate_limiter: FromDishka[PasswordRateLimiter],
 ):
     assert _callback.from_user is not None
     test_id = manager.dialog_data.get("selected_test_id")
@@ -66,6 +68,12 @@ async def on_start_test(
         await attempt_repo.attempt_dao.delete(active_attempt.id)
     
     if test.password:
+        # Проверяем rate limit перед показом экрана ввода пароля
+        allowed, wait_time = await rate_limiter.check(user_id)
+        if not allowed:
+            minutes = int(wait_time // 60) + 1
+            await _callback.answer(f"⏳ Слишком много попыток. Подождите {minutes} мин.", show_alert=True)
+            return
         await manager.start(UserTestSG.password_input, mode=StartMode.NORMAL, data={"test_id": test_id})
     else:
         _, questions = await test_repo.get_test_with_questions(test_id)
@@ -100,6 +108,7 @@ async def on_password_input(
     test_dao: FromDishka[TestDAO],
     test_repo: FromDishka[TestRepository],
     attempt_repo: FromDishka[TestAttemptRepository],
+    rate_limiter: FromDishka[PasswordRateLimiter],
 ):
     assert message.from_user is not None
     start_data = manager.start_data or {}
@@ -137,7 +146,14 @@ async def on_password_input(
         
         await manager.switch_to(first_state)
     else:
-        await message.answer("❌ Неверный пароль")
+        # Проверяем rate limit при неверном пароле
+        allowed, wait_time = await rate_limiter.check(message.from_user.id)
+        if not allowed:
+            minutes = int(wait_time // 60) + 1
+            await message.answer(f"❌ Неверный пароль\n⏳ Слишком много попыток. Подождите {minutes} мин.")
+            await manager.done()
+        else:
+            await message.answer("❌ Неверный пароль")
 
 
 @inject

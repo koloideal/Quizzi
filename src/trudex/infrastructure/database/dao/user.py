@@ -27,6 +27,13 @@ class UserDAO:
         model = result.scalar_one_or_none()
         return UserDTO(model).to_domain() if model else None
     
+    async def get_by_username(self, username: str) -> DomainUser | None:
+        result = await self.session.execute(
+            select(User).where(User.username == username)
+        )
+        model = result.scalar_one_or_none()
+        return UserDTO(model).to_domain() if model else None
+    
     async def get_all(self) -> list[DomainUser]:
         result = await self.session.execute(
             select(User).order_by(User.created_at.desc())
