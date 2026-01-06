@@ -1,0 +1,40 @@
+[project]
+name = "quizzi"
+version = "0.1.0"
+description = "Occupational health and safety testing platform"
+authors = [{ name = "kolo", email = "kolo.is.main@gmail.com" }]
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.12,<3.14"
+dependencies = [
+    "aiogram>=3.23.0",
+    "aiogram-dialog>=2.4.0",
+    "alembic>=1.17.2",
+    "asyncpg>=0.31.0",
+    "dishka>=1.7.2",
+    "httpx>=0.28.1",
+    "sqlalchemy>=2.0.45",
+    "apscheduler>=3.10.4",
+    "pydantic>=2.10.5",
+    "qrcode[pil]>=8.2",
+    "pycryptodome>=3.23.0",
+    "json5>=0.13.0",
+]
+
+[dependency-groups]
+dev = [
+    "isort>=7.0.0",
+    "ruff>=0.14.10",
+    "watchfiles>=1.1.1",
+]
+
+[tool.pyright]
+typeCheckingMode = "standard"
+
+[tool.isort]
+line_length = 110
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
