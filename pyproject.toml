@@ -1,5 +1,5 @@
 [project]
-name = "trudex"
+name = "quizzi"
 version = "0.1.0"
 description = "Occupational health and safety testing platform"
 authors = [{ name = "kolo", email = "kolo.is.main@gmail.com" }]

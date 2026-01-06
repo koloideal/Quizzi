@@ -718,6 +718,55 @@ pil = [
 ]
 
 [[package]]
+name = "quizzi"
+version = "0.1.0"
+source = { editable = "." }
+dependencies = [
+    { name = "aiogram" },
+    { name = "aiogram-dialog" },
+    { name = "alembic" },
+    { name = "apscheduler" },
+    { name = "asyncpg" },
+    { name = "dishka" },
+    { name = "httpx" },
+    { name = "json5" },
+    { name = "pycryptodome" },
+    { name = "pydantic" },
+    { name = "qrcode", extra = ["pil"] },
+    { name = "sqlalchemy" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "isort" },
+    { name = "ruff" },
+    { name = "watchfiles" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "aiogram", specifier = ">=3.23.0" },
+    { name = "aiogram-dialog", specifier = ">=2.4.0" },
+    { name = "alembic", specifier = ">=1.17.2" },
+    { name = "apscheduler", specifier = ">=3.10.4" },
+    { name = "asyncpg", specifier = ">=0.31.0" },
+    { name = "dishka", specifier = ">=1.7.2" },
+    { name = "httpx", specifier = ">=0.28.1" },
+    { name = "json5", specifier = ">=0.13.0" },
+    { name = "pycryptodome", specifier = ">=3.23.0" },
+    { name = "pydantic", specifier = ">=2.10.5" },
+    { name = "qrcode", extras = ["pil"], specifier = ">=8.2" },
+    { name = "sqlalchemy", specifier = ">=2.0.45" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "isort", specifier = ">=7.0.0" },
+    { name = "ruff", specifier = ">=0.14.10" },
+    { name = "watchfiles", specifier = ">=1.1.1" },
+]
+
+[[package]]
 name = "ruff"
 version = "0.14.10"
 source = { registry = "https://pypi.org/simple" }
@@ -768,55 +817,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/3d/8d/bb40a5d10e7a5f2195f235c0b2f2c79b0bf6e8f00c0c223130a4fbd2db09/sqlalchemy-2.0.45-cp313-cp313t-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:83d7009f40ce619d483d26ac1b757dfe3167b39921379a8bd1b596cf02dab4a6", size = 3521998, upload-time = "2025-12-09T22:13:28.622Z" },
     { url = "https://files.pythonhosted.org/packages/75/a5/346128b0464886f036c039ea287b7332a410aa2d3fb0bb5d404cb8861635/sqlalchemy-2.0.45-cp313-cp313t-musllinux_1_2_x86_64.whl", hash = "sha256:d8a2ca754e5415cde2b656c27900b19d50ba076aa05ce66e2207623d3fe41f5a", size = 3473434, upload-time = "2025-12-09T22:13:30.188Z" },
     { url = "https://files.pythonhosted.org/packages/bf/e1/3ccb13c643399d22289c6a9786c1a91e3dcbb68bce4beb44926ac2c557bf/sqlalchemy-2.0.45-py3-none-any.whl", hash = "sha256:5225a288e4c8cc2308dbdd874edad6e7d0fd38eac1e9e5f23503425c8eee20d0", size = 1936672, upload-time = "2025-12-09T21:54:52.608Z" },
-]
-
-[[package]]
-name = "trudex"
-version = "0.1.0"
-source = { editable = "." }
-dependencies = [
-    { name = "aiogram" },
-    { name = "aiogram-dialog" },
-    { name = "alembic" },
-    { name = "apscheduler" },
-    { name = "asyncpg" },
-    { name = "dishka" },
-    { name = "httpx" },
-    { name = "json5" },
-    { name = "pycryptodome" },
-    { name = "pydantic" },
-    { name = "qrcode", extra = ["pil"] },
-    { name = "sqlalchemy" },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "isort" },
-    { name = "ruff" },
-    { name = "watchfiles" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "aiogram", specifier = ">=3.23.0" },
-    { name = "aiogram-dialog", specifier = ">=2.4.0" },
-    { name = "alembic", specifier = ">=1.17.2" },
-    { name = "apscheduler", specifier = ">=3.10.4" },
-    { name = "asyncpg", specifier = ">=0.31.0" },
-    { name = "dishka", specifier = ">=1.7.2" },
-    { name = "httpx", specifier = ">=0.28.1" },
-    { name = "json5", specifier = ">=0.13.0" },
-    { name = "pycryptodome", specifier = ">=3.23.0" },
-    { name = "pydantic", specifier = ">=2.10.5" },
-    { name = "qrcode", extras = ["pil"], specifier = ">=8.2" },
-    { name = "sqlalchemy", specifier = ">=2.0.45" },
-]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "isort", specifier = ">=7.0.0" },
-    { name = "ruff", specifier = ">=0.14.10" },
-    { name = "watchfiles", specifier = ">=1.1.1" },
 ]
 
 [[package]]

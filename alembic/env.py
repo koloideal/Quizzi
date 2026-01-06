@@ -5,8 +5,8 @@ from sqlalchemy import Connection
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from alembic import context
-from trudex.infrastructure.database.models import Base
-from trudex.infrastructure.utils.config import Config
+from quizzi.infrastructure.database.models import Base
+from quizzi.infrastructure.utils.config import Config
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
