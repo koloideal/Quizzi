@@ -10,7 +10,6 @@ from quizzi.infrastructure.database.models import Test
 
 
 class _UNSET:
-    """Sentinel для различения None и "не передано"."""
     pass
 
 

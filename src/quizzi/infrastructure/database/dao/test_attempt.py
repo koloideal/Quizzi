@@ -46,6 +46,7 @@ class TestAttemptDAO:
         self,
         attempt_id: int,
         finished_at: datetime | None = None,
+        warning_sent_at: datetime | None = None,
         score: int | None = None,
         is_passed: bool | None = None,
     ) -> DomainTestAttempt | None:
@@ -58,6 +59,8 @@ class TestAttemptDAO:
         
         if finished_at is not None:
             attempt.finished_at = finished_at
+        if warning_sent_at is not None:
+            attempt.warning_sent_at = warning_sent_at
         if score is not None:
             attempt.score = score
         if is_passed is not None:

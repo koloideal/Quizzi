@@ -12,6 +12,7 @@ from quizzi.infrastructure.database.models import QuestionType
 from quizzi.infrastructure.database.repo.test import TestRepository
 from quizzi.infrastructure.database.repo.test_attempt import TestAttemptRepository
 from quizzi.infrastructure.utils.rate_limiter import PasswordRateLimiter
+from quizzi.infrastructure.utils.timezone import now_msk_naive
 
 
 @inject
@@ -92,15 +93,22 @@ async def on_start_deeplink_test(
     if active_attempt:
         await attempt_repo.attempt_dao.delete(active_attempt.id)
     
-    if test.password:
+    if test.time_limit:
+        await manager.start(UserTestSG.confirm_time_limit, mode=StartMode.NORMAL, data={
+            "test_id": test_id,
+            "time_limit": test.time_limit,
+            "has_password": bool(test.password),
+        })
+    elif test.password:
         allowed, wait_time = await rate_limiter.check(user_id)
         if not allowed:
             minutes = int(wait_time // 60) + 1
             await _callback.answer(f"⏳ Слишком много попыток. Подождите {minutes} мин.", show_alert=True)
             return
+        manager.dialog_data["time_limit"] = None
         await manager.switch_to(UserDeeplinkSG.password_input)
     else:
-        await start_test_without_password(manager, test_repo, attempt_repo, test_id, user_id)
+        await start_test_without_password(manager, test_repo, attempt_repo, test_id, user_id, None)
 
 
 async def start_test_without_password(
@@ -109,6 +117,7 @@ async def start_test_without_password(
     attempt_repo: TestAttemptRepository,
     test_id: int,
     user_id: int,
+    time_limit: int | None = None,
 ):
     _, questions = await test_repo.get_test_with_questions(test_id)
     
@@ -116,6 +125,7 @@ async def start_test_without_password(
         return
     
     attempt = await attempt_repo.attempt_dao.create(user_id=user_id, test_id=test_id)
+    started_at = now_msk_naive()
     
     first_question, _ = await test_repo.get_question_with_options(questions[0].id)
     
@@ -138,6 +148,8 @@ async def start_test_without_password(
             "questions": [q.id for q in questions],
             "current_question_index": 0,
             "user_answers": {},
+            "time_limit": time_limit,
+            "started_at": started_at.isoformat(),
         }
     )
 
@@ -170,8 +182,9 @@ async def on_deeplink_password_input(
     
     if message.text and message.text.strip() == test.password:
         await message.answer("✅ Пароль верный")
+        time_limit = manager.dialog_data.get("time_limit")
         await start_test_without_password(
-            manager, test_repo, attempt_repo, test_id, message.from_user.id
+            manager, test_repo, attempt_repo, test_id, message.from_user.id, time_limit
         )
     else:
         allowed, wait_time = await rate_limiter.check(message.from_user.id)

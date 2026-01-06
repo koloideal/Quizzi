@@ -13,11 +13,13 @@ class UserMenuSG(StatesGroup):
 
 class UserTestSG(StatesGroup):
     password_input = State()
+    confirm_time_limit = State()
     question_single = State()
     question_multiple = State()
     question_input = State()
     results = State()
     detailed_results = State()
+    time_expired = State()
 
 
 class UserDeeplinkSG(StatesGroup):

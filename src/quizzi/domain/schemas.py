@@ -74,6 +74,7 @@ class TestAttempt:
     test_id: int
     started_at: datetime
     finished_at: datetime | None = None
+    warning_sent_at: datetime | None = None
     score: int = 0
     is_passed: bool = False
 

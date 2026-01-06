@@ -105,6 +105,7 @@ class TestAttempt(Base):
     test_id: Mapped[int] = mapped_column(ForeignKey("tests.id"), index=True)
     started_at: Mapped[datetime] = mapped_column(server_default=func.now())
     finished_at: Mapped[datetime | None] = mapped_column(default=None)
+    warning_sent_at: Mapped[datetime | None] = mapped_column(default=None)
     score: Mapped[int] = mapped_column(Integer, default=0)
     is_passed: Mapped[bool] = mapped_column(default=False)
     

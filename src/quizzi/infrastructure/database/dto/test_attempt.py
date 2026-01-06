@@ -13,6 +13,7 @@ class TestAttemptDTO:
             test_id=self.model.test_id,
             started_at=self.model.started_at,
             finished_at=self.model.finished_at,
+            warning_sent_at=self.model.warning_sent_at,
             score=self.model.score,
             is_passed=self.model.is_passed,
         )
