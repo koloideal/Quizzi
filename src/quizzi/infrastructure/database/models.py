@@ -52,6 +52,7 @@ class Test(Base):
     password: Mapped[str | None] = mapped_column(String(255), default=None)
     expires_at: Mapped[datetime | None] = mapped_column(default=None)
     attempts: Mapped[int | None] = mapped_column(Integer, default=None)
+    time_limit: Mapped[int | None] = mapped_column(Integer, default=None)
     is_active: Mapped[bool] = mapped_column(default=True)
     are_results_viewable: Mapped[bool] = mapped_column(default=False)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())

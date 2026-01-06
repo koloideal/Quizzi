@@ -24,6 +24,7 @@ class ParsedTest:
     description: str | None
     password: str | None
     attempts: int | None
+    time_limit: int | None
     expires_at: datetime | None
     for_group: int | None
     questions: list[ParsedQuestion]
@@ -53,6 +54,7 @@ class TestParser:
         description = self._parse_string(data, "description", required=False, max_length=2000, errors=errors)
         password = self._parse_string(data, "password", required=False, max_length=255, errors=errors)
         attempts = self._parse_int(data, "attempts", required=False, min_val=1, max_val=100, errors=errors)
+        time_limit = self._parse_int(data, "time_limit", required=False, min_val=1, max_val=86400, errors=errors)
         expires_at = self._parse_datetime(data, "expires_at", required=False, errors=errors)
         for_group = self._parse_int(data, "for_group", required=False, errors=errors)
         
@@ -68,6 +70,7 @@ class TestParser:
             description=description,
             password=password,
             attempts=attempts,
+            time_limit=time_limit,
             expires_at=expires_at,
             for_group=for_group,
             questions=questions,

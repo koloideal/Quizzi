@@ -68,6 +68,7 @@ async def get_test_detail(test_dao: FromDishka[TestDAO], test_repo: FromDishka[T
     status = "🟢 Активен" if test.is_active else "🔴 Деактивирован"
     password_str = f"🔒 {test.password}" if test.password else "🔓 Без пароля"
     attempts_str = f"🔄 {test.attempts}" if test.attempts else "♾️ Без ограничений"
+    time_limit_str = f"⏱️ {test.time_limit // 60} мин" if test.time_limit else "⏱️ Без лимита"
     expires_str = f"📅 {to_msk(test.expires_at).strftime('%d.%m.%Y %H:%M')}" if test.expires_at else "📅 Без срока"
     group_str = f"🎓 Группа {test.for_group}" if test.for_group else "👥 Для всех"
     results_str = "👁 Результаты видны" if test.are_results_viewable else "🔒 Результаты скрыты"
@@ -80,6 +81,7 @@ async def get_test_detail(test_dao: FromDishka[TestDAO], test_repo: FromDishka[T
         f"<b>Вопросов:</b> {questions_count}\n"
         f"<b>Пароль:</b> {password_str}\n"
         f"<b>Попытки:</b> {attempts_str}\n"
+        f"<b>Время:</b> {time_limit_str}\n"
         f"<b>Срок:</b> {expires_str}\n"
         f"<b>Группа:</b> {group_str}\n"
         f"<b>Видимость:</b> {results_str}\n\n"
@@ -254,6 +256,7 @@ async def on_export_test(
         "description": test.description,
         "password": test.password,
         "attempts": test.attempts,
+        "time_limit": test.time_limit,
         "expires_at": test.expires_at.isoformat() if test.expires_at else None,
         "for_group": test.for_group,
         "questions": [],
@@ -361,6 +364,10 @@ async def on_edit_attempts(_callback: CallbackQuery, _button: Button, manager: D
     await manager.switch_to(SharedTestsSG.edit_attempts)
 
 
+async def on_edit_time_limit(_callback: CallbackQuery, _button: Button, manager: DialogManager):
+    await manager.switch_to(SharedTestsSG.edit_time_limit)
+
+
 async def on_edit_group(_callback: CallbackQuery, _button: Button, manager: DialogManager):
     await manager.switch_to(SharedTestsSG.edit_group)
 
@@ -443,6 +450,51 @@ async def on_remove_attempts(_callback: CallbackQuery, _button: Button, manager:
     
     await test_dao.update(test_id, attempts=None)
     await _callback.answer("✅ Ограничение попыток удалено")
+    await manager.switch_to(SharedTestsSG.test_detail)
+
+
+@inject
+async def on_time_limit_input(message: Message, _widget: MessageInput, manager: DialogManager, test_dao: FromDishka[TestDAO]):
+    test_id = manager.dialog_data.get("selected_test_id")
+    if not test_id:
+        await message.answer("❌ Тест не найден")
+        return
+    
+    if not message.text:
+        await message.answer("❌ Лимит времени не может быть пустым")
+        return
+    
+    time_limit_str = message.text.strip()
+    
+    if not time_limit_str.isdigit():
+        await message.answer("❌ Лимит времени должен быть числом (в минутах)")
+        return
+    
+    time_limit_minutes = int(time_limit_str)
+    
+    if time_limit_minutes < 1:
+        await message.answer("❌ Лимит времени должен быть больше 0")
+        return
+    
+    if time_limit_minutes > 1440:
+        await message.answer("❌ Лимит времени не может быть больше 1440 минут (24 часа)")
+        return
+    
+    time_limit_seconds = time_limit_minutes * 60
+    await test_dao.update(test_id, time_limit=time_limit_seconds)
+    await message.answer("✅ Лимит времени обновлен")
+    await manager.switch_to(SharedTestsSG.test_detail)
+
+
+@inject
+async def on_remove_time_limit(_callback: CallbackQuery, _button: Button, manager: DialogManager, test_dao: FromDishka[TestDAO]):
+    test_id = manager.dialog_data.get("selected_test_id")
+    if not test_id:
+        await _callback.answer("❌ Тест не найден")
+        return
+    
+    await test_dao.update(test_id, time_limit=None)
+    await _callback.answer("✅ Лимит времени удален")
     await manager.switch_to(SharedTestsSG.test_detail)
 
 
@@ -561,6 +613,7 @@ shared_tests_dialog = Dialog(
         Column(
             Button(Const("🔑 Пароль"), id="edit_password", on_click=on_edit_password),
             Button(Const("🔄 Попытки"), id="edit_attempts", on_click=on_edit_attempts),
+            Button(Const("⏱️ Лимит времени"), id="edit_time_limit", on_click=on_edit_time_limit),
             Button(Const("👥 Группа"), id="edit_group", on_click=on_edit_group),
             Button(Const("📅 Срок действия"), id="edit_expires", on_click=on_edit_expires),
             Button(Const("◀️ Назад"), id="back", on_click=on_back_to_detail),
@@ -584,6 +637,15 @@ shared_tests_dialog = Dialog(
             Button(Const("◀️ Назад"), id="back", on_click=on_back_to_edit_menu),
         ),
         state=SharedTestsSG.edit_attempts,
+    ),
+    Window(
+        Const("<b>⏱️ Изменение лимита времени</b>\n\n🔢 <b>Введите лимит времени в минутах</b> (1-1440) или удалите ограничение:"),
+        MessageInput(on_time_limit_input),
+        Column(
+            Button(Const("🗑 Без лимита"), id="remove_time_limit", on_click=on_remove_time_limit),
+            Button(Const("◀️ Назад"), id="back", on_click=on_back_to_edit_menu),
+        ),
+        state=SharedTestsSG.edit_time_limit,
     ),
     Window(
         Const("<b>👥 Изменение группы</b>\n\n🎓 <b>Выберите группу</b> или удалите привязку:"),

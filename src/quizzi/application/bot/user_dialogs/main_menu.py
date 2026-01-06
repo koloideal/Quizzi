@@ -278,6 +278,7 @@ async def get_test_detail(
     
     password_str = "🔒 Требуется пароль" if test.password else "🔓 Без пароля"
     attempts_str = f"🔄 Попыток: {len(finished_attempts)}/{test.attempts}" if test.attempts else f"🔄 Попыток: {len(finished_attempts)}/♾️"
+    time_limit_str = f"⏱️ Время: {test.time_limit // 60} мин" if test.time_limit else "⏱️ Без лимита"
     
     expires_at_msk = to_msk(test.expires_at)
     expires_str = f"📅 До {expires_at_msk.strftime('%d.%m.%Y %H:%M')}" if expires_at_msk else "📅 Без срока"
@@ -289,6 +290,7 @@ async def get_test_detail(
         f"<b>Вопросов:</b> {len(questions)}\n"
         f"{password_str}\n"
         f"{attempts_str}\n"
+        f"{time_limit_str}\n"
         f"{expires_str}\n"
         f"{group_str}"
     )

@@ -41,13 +41,15 @@ async def get_deeplink_test_data(
     
     password_str = "🔒 Требуется пароль" if test.password else "🔓 Без пароля"
     attempts_str = f"🔄 Попыток: {test.attempts}" if test.attempts else "🔄 Попыток: ♾️"
+    time_limit_str = f"⏱️ Время: {test.time_limit // 60} мин" if test.time_limit else "⏱️ Без лимита"
     
     test_info = (
         f"<b>📝 {test.title}</b>\n\n"
         f"<blockquote>{test.description or '—'}</blockquote>\n\n"
         f"<b>Вопросов:</b> {questions_count}\n"
         f"{password_str}\n"
-        f"{attempts_str}"
+        f"{attempts_str}\n"
+        f"{time_limit_str}"
     )
     
     return {"test_info": test_info, "can_start": True, "has_password": bool(test.password)}
