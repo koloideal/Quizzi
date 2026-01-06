@@ -20,6 +20,7 @@ class SharedTestsSG(StatesGroup):
     edit_expires = State()
     statistics = State()
     attempt_detail = State()
+    export_select_group = State()
 
 
 class SharedBroadcastSG(StatesGroup):

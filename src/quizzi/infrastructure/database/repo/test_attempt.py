@@ -284,3 +284,41 @@ class TestAttemptRepository:
 
     async def mark_warning_sent(self, attempt_id: int, sent_at: datetime) -> None:
         await self.attempt_dao.update(attempt_id=attempt_id, warning_sent_at=sent_at)
+
+    async def get_group_test_statistics(
+        self, test_id: int, group_number: int
+    ) -> list[tuple[str, int | None, datetime | None, bool | None]]:
+        result = await self.session.execute(
+            select(
+                UserModel.name,
+                UserModel.first_name,
+                TestAttemptModel.score,
+                TestAttemptModel.finished_at,
+                TestAttemptModel.is_passed,
+            )
+            .select_from(UserModel)
+            .outerjoin(
+                TestAttemptModel,
+                (TestAttemptModel.user_id == UserModel.id) & 
+                (TestAttemptModel.test_id == test_id) &
+                (TestAttemptModel.finished_at.isnot(None))
+            )
+            .where(UserModel.group == group_number)
+            .order_by(UserModel.name, UserModel.first_name, TestAttemptModel.finished_at.desc())
+        )
+        rows = result.all()
+        
+        user_best: dict[str, tuple[int | None, datetime | None, bool | None]] = {}
+        for name, first_name, score, finished_at, is_passed in rows:
+            display_name = name or first_name
+            if display_name not in user_best:
+                user_best[display_name] = (score, finished_at, is_passed)
+            elif score is not None:
+                current_score = user_best[display_name][0]
+                if current_score is None or score > current_score:
+                    user_best[display_name] = (score, finished_at, is_passed)
+        
+        return [
+            (name, score, finished_at, is_passed)
+            for name, (score, finished_at, is_passed) in sorted(user_best.items())
+        ]
