@@ -125,7 +125,6 @@ class TestRepository:
     async def get_questions_with_options_by_ids(
         self, question_ids: list[int]
     ) -> dict[int, tuple[Question, list[Option]]]:
-        """Загружает вопросы с опциями по списку ID за один запрос."""
         if not question_ids:
             return {}
         

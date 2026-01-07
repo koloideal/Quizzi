@@ -52,6 +52,7 @@ class Test(Base):
     password: Mapped[str | None] = mapped_column(String(255), default=None)
     expires_at: Mapped[datetime | None] = mapped_column(default=None)
     attempts: Mapped[int | None] = mapped_column(Integer, default=None)
+    time_limit: Mapped[int | None] = mapped_column(Integer, default=None)
     is_active: Mapped[bool] = mapped_column(default=True)
     are_results_viewable: Mapped[bool] = mapped_column(default=False)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
@@ -61,6 +62,11 @@ class Test(Base):
         back_populates="test",
         cascade="all, delete-orphan",
         order_by="Question.position"
+    )
+    
+    test_attempts: Mapped[list["TestAttempt"]] = relationship(
+        back_populates="test",
+        cascade="all, delete-orphan",
     )
 
 
@@ -104,11 +110,12 @@ class TestAttempt(Base):
     test_id: Mapped[int] = mapped_column(ForeignKey("tests.id"), index=True)
     started_at: Mapped[datetime] = mapped_column(server_default=func.now())
     finished_at: Mapped[datetime | None] = mapped_column(default=None)
+    warning_sent_at: Mapped[datetime | None] = mapped_column(default=None)
     score: Mapped[int] = mapped_column(Integer, default=0)
     is_passed: Mapped[bool] = mapped_column(default=False)
     
     user: Mapped["User"] = relationship()
-    test: Mapped["Test"] = relationship()
+    test: Mapped["Test"] = relationship(back_populates="test_attempts")
     answers: Mapped[list["UserAnswer"]] = relationship(
         back_populates="attempt",
         cascade="all, delete-orphan"

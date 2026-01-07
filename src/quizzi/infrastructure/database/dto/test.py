@@ -15,6 +15,7 @@ class TestDTO:
             password=self.model.password,
             expires_at=self.model.expires_at,
             attempts=self.model.attempts,
+            time_limit=self.model.time_limit,
             is_active=self.model.is_active,
             are_results_viewable=self.model.are_results_viewable,
             created_at=self.model.created_at,

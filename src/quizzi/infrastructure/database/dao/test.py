@@ -10,7 +10,6 @@ from quizzi.infrastructure.database.models import Test
 
 
 class _UNSET:
-    """Sentinel для различения None и "не передано"."""
     pass
 
 
@@ -24,6 +23,7 @@ class TestUpdateFields(TypedDict, total=False):
     password: str | None
     expires_at: datetime | None
     attempts: int | None
+    time_limit: int | None
     is_active: bool
     are_results_viewable: bool
 
@@ -41,7 +41,7 @@ class TestDAO:
     
     async def get_all(self) -> list[DomainTest]:
         result = await self.session.execute(
-            select(Test).order_by(Test.created_at.desc())
+            select(Test).order_by(Test.is_active.desc(), Test.created_at.desc())
         )
         models = list(result.scalars().all())
         return [TestDTO(model).to_domain() for model in models]
@@ -64,6 +64,7 @@ class TestDAO:
         password: str | None = None,
         expires_at: datetime | None = None,
         attempts: int | None = None,
+        time_limit: int | None = None,
         is_active: bool = True,
         are_results_viewable: bool = False,
     ) -> DomainTest:
@@ -74,6 +75,7 @@ class TestDAO:
             password=password,
             expires_at=expires_at,
             attempts=attempts,
+            time_limit=time_limit,
             is_active=is_active,
             are_results_viewable=are_results_viewable,
         )
@@ -91,6 +93,7 @@ class TestDAO:
         password: str | None | _UNSET = UNSET,
         expires_at: datetime | None | _UNSET = UNSET,
         attempts: int | None | _UNSET = UNSET,
+        time_limit: int | None | _UNSET = UNSET,
         is_active: bool | _UNSET = UNSET,
         are_results_viewable: bool | _UNSET = UNSET,
     ) -> DomainTest | None:
@@ -113,6 +116,8 @@ class TestDAO:
             test.expires_at = expires_at
         if not isinstance(attempts, _UNSET):
             test.attempts = attempts
+        if not isinstance(time_limit, _UNSET):
+            test.time_limit = time_limit
         if not isinstance(is_active, _UNSET):
             test.is_active = is_active
         if not isinstance(are_results_viewable, _UNSET):

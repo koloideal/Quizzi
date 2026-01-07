@@ -1,6 +1,7 @@
 import logging
 from collections.abc import AsyncIterable
 
+from aiogram import Bot
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from dishka import AsyncContainer, Provider, Scope, provide
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -16,7 +17,7 @@ from quizzi.infrastructure.database.dao.user_answer import UserAnswerDAO
 from quizzi.infrastructure.database.repo.test import TestRepository
 from quizzi.infrastructure.database.repo.test_attempt import TestAttemptRepository
 from quizzi.infrastructure.database.repo.user import UserRepository
-from quizzi.infrastructure.scheduling.tasks import deactivate_expired_tests
+from quizzi.infrastructure.scheduling.tasks import deactivate_expired_tests, finish_expired_test_attempts, send_time_warning_notifications
 from quizzi.infrastructure.utils.config import Config
 from quizzi.infrastructure.utils.rate_limiter import PasswordRateLimiter
 
@@ -81,7 +82,7 @@ class DatabaseProvider(Provider):
 
 class SchedulerProvider(Provider):
     @provide(scope = Scope.APP)
-    def get_scheduler(self, container: AsyncContainer) -> AsyncIOScheduler:
+    def get_scheduler(self, container: AsyncContainer, bot: Bot) -> AsyncIOScheduler:
         logging.getLogger('apscheduler').setLevel(logging.WARNING)
         scheduler = AsyncIOScheduler()
         
@@ -91,6 +92,22 @@ class SchedulerProvider(Provider):
             minutes=5,
             args=[container],
             id='deactivate_expired_tests',
+        )
+        
+        scheduler.add_job(
+            finish_expired_test_attempts,
+            'interval',
+            minutes=1,
+            args=[container, bot],
+            id='finish_expired_test_attempts',
+        )
+        
+        scheduler.add_job(
+            send_time_warning_notifications,
+            'interval',
+            seconds=10,
+            args=[container, bot],
+            id='send_time_warning_notifications',
         )
         
         return scheduler

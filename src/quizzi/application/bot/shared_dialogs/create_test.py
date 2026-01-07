@@ -100,11 +100,41 @@ async def on_attempts_input(message: Message, _widget: MessageInput, manager: Di
         return
     
     manager.dialog_data["attempts"] = attempts
-    await manager.switch_to(SharedCreateTestSG.input_expires_at)
+    await manager.switch_to(SharedCreateTestSG.input_time_limit)
 
 
 async def on_skip_attempts(_callback: CallbackQuery, _button: Button, manager: DialogManager):
     manager.dialog_data["attempts"] = None
+    await manager.switch_to(SharedCreateTestSG.input_time_limit)
+
+
+async def on_time_limit_input(message: Message, _widget: MessageInput, manager: DialogManager):
+    if not message.text:
+        await message.answer("❌ Лимит времени не может быть пустым")
+        return
+    
+    time_limit_str = message.text.strip()
+    
+    if not time_limit_str.isdigit():
+        await message.answer("❌ Лимит времени должен быть числом (в минутах)")
+        return
+    
+    time_limit_minutes = int(time_limit_str)
+    
+    if time_limit_minutes < 1:
+        await message.answer("❌ Лимит времени должен быть больше 0")
+        return
+    
+    if time_limit_minutes > 1440:
+        await message.answer("❌ Лимит времени не может быть больше 1440 минут (24 часа)")
+        return
+    
+    manager.dialog_data["time_limit"] = time_limit_minutes * 60
+    await manager.switch_to(SharedCreateTestSG.input_expires_at)
+
+
+async def on_skip_time_limit(_callback: CallbackQuery, _button: Button, manager: DialogManager):
+    manager.dialog_data["time_limit"] = None
     await manager.switch_to(SharedCreateTestSG.input_expires_at)
 
 
@@ -139,11 +169,13 @@ async def get_test_info(dialog_manager: DialogManager, **_kwargs):
     description = dialog_manager.dialog_data.get("description", "—")
     password = dialog_manager.dialog_data.get("password")
     attempts = dialog_manager.dialog_data.get("attempts")
+    time_limit = dialog_manager.dialog_data.get("time_limit")
     expires_at = dialog_manager.dialog_data.get("expires_at")
     for_group = dialog_manager.dialog_data.get("for_group")
     
     password_str = f"🔒 {password}" if password else "Без пароля"
     attempts_str = f"🔄 {attempts}" if attempts else "♾️ Без ограничений"
+    time_limit_str = f"⏱️ {time_limit // 60} мин" if time_limit else "⏱️ Без лимита"
     expires_at_msk = to_msk(expires_at)
     expires_str = expires_at_msk.strftime("%d.%m.%Y") if expires_at_msk else "Без срока"
     group_str = str(for_group) if for_group else "Для всех"
@@ -155,6 +187,7 @@ async def get_test_info(dialog_manager: DialogManager, **_kwargs):
             f"<b>Описание:</b> {description}\n"
             f"<b>Пароль:</b> {password_str}\n"
             f"<b>Попыток:</b> {attempts_str}\n"
+            f"<b>Время:</b> {time_limit_str}\n"
             f"<b>Истекает:</b> {expires_str}\n"
             f"<b>Для группы:</b> {group_str}"
         )
@@ -168,6 +201,7 @@ async def on_confirm_test(_callback: CallbackQuery, _button: Button, manager: Di
     description = manager.dialog_data.get("description")
     password = manager.dialog_data.get("password")
     attempts = manager.dialog_data.get("attempts")
+    time_limit = manager.dialog_data.get("time_limit")
     expires_at = manager.dialog_data.get("expires_at")
     for_group = manager.dialog_data.get("for_group")
     
@@ -176,6 +210,7 @@ async def on_confirm_test(_callback: CallbackQuery, _button: Button, manager: Di
         description=description,
         password=password,
         attempts=attempts,
+        time_limit=time_limit,
         expires_at=expires_at,
         for_group=for_group,
     )
@@ -469,6 +504,12 @@ shared_create_test_dialog = Dialog(
         MessageInput(on_attempts_input),
         Button(Const("⏭️ Без ограничений"), id="skip_attempts", on_click=on_skip_attempts),
         state=SharedCreateTestSG.input_attempts,
+    ),
+    Window(
+        Const("<b>⏱️ Лимит времени</b>\n\n🔢 <b>Введите лимит времени в минутах</b> (1-1440) или пропустите для неограниченного времени:"),
+        MessageInput(on_time_limit_input),
+        Button(Const("⏭️ Без лимита"), id="skip_time_limit", on_click=on_skip_time_limit),
+        state=SharedCreateTestSG.input_time_limit,
     ),
     Window(
         Const("<b>📅 Срок действия</b>\n\n🗓 <b>Выберите дату истечения теста</b> или пропустите:"),

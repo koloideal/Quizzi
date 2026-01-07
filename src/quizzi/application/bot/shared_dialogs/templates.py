@@ -36,6 +36,7 @@ SPEC_INFO = """<b>📋 Спецификация формата JSON</b>
   "description": "Описание теста",
   "password": null,
   "attempts": null,
+  "time_limit": null,
   "expires_at": null,
   "for_group": null,
   "questions": [...]
@@ -46,6 +47,7 @@ SPEC_INFO = """<b>📋 Спецификация формата JSON</b>
 • <code>description</code> — описание (до 2000 символов)
 • <code>password</code> — пароль для доступа или <code>null</code>
 • <code>attempts</code> — лимит попыток (1-100) или <code>null</code>
+• <code>time_limit</code> — лимит времени в секундах (1-86400) или <code>null</code>
 • <code>expires_at</code> — срок действия в ISO формате или <code>null</code>
 • <code>for_group</code> — номер группы или <code>null</code> для всех
 
@@ -90,6 +92,7 @@ TEMPLATE_ULTIMATE = """// ══════════════════
 // ⚙️ НАСТРОЙКИ:
 //    • Пароль: test2024
 //    • Попыток: 5
+//    • Лимит времени: 1800 секунд (30 минут)
 //    • Срок действия: 31 декабря 2026, 23:59
 //    • Для группы: 2024 (или null для всех)
 // 
@@ -104,6 +107,7 @@ TEMPLATE_ULTIMATE = """// ══════════════════
 // 💡 ПОДСКАЗКИ:
 //    • null означает "не задано" / "без ограничений"
 //    • expires_at в формате ISO 8601: YYYY-MM-DDTHH:MM:SS
+//    • time_limit в секундах (1-86400), null для без ограничений
 //    • for_group - номер группы или null для всех пользователей
 //    • image_url - URL изображения к вопросу (опционально)
 // 
@@ -114,6 +118,7 @@ TEMPLATE_ULTIMATE = """// ══════════════════
   "description": "Полная демонстрация всех возможностей формата: разные типы вопросов, настройки доступа, ограничения по времени и группам",
   "password": "test2024",
   "attempts": 5,
+  "time_limit": 1800,
   "expires_at": "2026-12-31T23:59:59",
   "for_group": 2024,
   "questions": [
@@ -225,6 +230,7 @@ async def on_test_selected_for_export(
         "description": test.description,
         "password": test.password,
         "attempts": test.attempts,
+        "time_limit": test.time_limit,
         "expires_at": test.expires_at.isoformat() if test.expires_at else None,
         "for_group": test.for_group,
         "questions": [],
@@ -340,6 +346,7 @@ async def create_test_from_parsed(
         description=parsed.description,
         password=parsed.password,
         attempts=parsed.attempts,
+        time_limit=parsed.time_limit,
         expires_at=parsed.expires_at,
         for_group=parsed.for_group,
         is_active=False,

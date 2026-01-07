@@ -41,6 +41,7 @@ class Test:
     password: str | None = None
     expires_at: datetime | None = None
     attempts: int | None = None
+    time_limit: int | None = None
     is_active: bool = True
     are_results_viewable: bool = False
     created_at: datetime | None = None
@@ -73,6 +74,7 @@ class TestAttempt:
     test_id: int
     started_at: datetime
     finished_at: datetime | None = None
+    warning_sent_at: datetime | None = None
     score: int = 0
     is_passed: bool = False
 

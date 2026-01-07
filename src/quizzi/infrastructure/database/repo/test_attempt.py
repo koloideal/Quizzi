@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import final
 
 from sqlalchemy import func, select
@@ -9,7 +10,10 @@ from quizzi.infrastructure.database.dao.test_attempt import TestAttemptDAO
 from quizzi.infrastructure.database.dao.user_answer import UserAnswerDAO
 from quizzi.infrastructure.database.dto.test_attempt import TestAttemptDTO
 from quizzi.infrastructure.database.dto.user_answer import UserAnswerDTO
+from quizzi.infrastructure.database.models import Question as QuestionModel
+from quizzi.infrastructure.database.models import Test as TestModel
 from quizzi.infrastructure.database.models import TestAttempt as TestAttemptModel
+from quizzi.infrastructure.database.models import User as UserModel
 from quizzi.infrastructure.database.models import UserAnswer as UserAnswerModel
 from quizzi.infrastructure.utils.timezone import now_msk_naive
 
@@ -173,8 +177,6 @@ class TestAttemptRepository:
         }
     
     async def get_most_difficult_questions(self, test_id: int, limit: int = 10) -> list[tuple[int, float]]:
-        from quizzi.infrastructure.database.models import Question as QuestionModel
-        
         result = await self.session.execute(
             select(
                 UserAnswerModel.question_id,
@@ -209,8 +211,6 @@ class TestAttemptRepository:
         }
 
     async def get_finished_attempts_with_tests(self, user_id: int) -> list[tuple[TestAttempt, str]]:
-        from quizzi.infrastructure.database.models import Test as TestModel
-        
         result = await self.session.execute(
             select(TestAttemptModel, TestModel.title)
             .join(TestModel, TestAttemptModel.test_id == TestModel.id)
@@ -222,8 +222,6 @@ class TestAttemptRepository:
         return [(TestAttemptDTO(row[0]).to_domain(), row[1]) for row in rows]
 
     async def get_test_attempts_with_users(self, test_id: int) -> list[tuple[TestAttempt, str]]:
-        from quizzi.infrastructure.database.models import User as UserModel
-        
         result = await self.session.execute(
             select(TestAttemptModel, UserModel.name, UserModel.first_name)
             .join(UserModel, TestAttemptModel.user_id == UserModel.id)
@@ -233,3 +231,94 @@ class TestAttemptRepository:
         )
         rows = result.all()
         return [(TestAttemptDTO(row[0]).to_domain(), row[1] or row[2]) for row in rows]
+
+    async def get_expired_active_attempts(self, now: datetime) -> list[tuple[TestAttempt, int]]:
+        result = await self.session.execute(
+            select(TestAttemptModel, TestModel.time_limit)
+            .join(TestModel, TestAttemptModel.test_id == TestModel.id)
+            .where(TestAttemptModel.finished_at.is_(None))
+            .where(TestModel.time_limit.isnot(None))
+        )
+        rows = result.all()
+        
+        expired = []
+        for attempt_model, time_limit in rows:
+            if time_limit:
+                elapsed = (now - attempt_model.started_at).total_seconds()
+                if elapsed >= time_limit:
+                    expired.append((TestAttemptDTO(attempt_model).to_domain(), time_limit))
+        
+        return expired
+
+    async def get_attempts_needing_warning(self, now: datetime) -> list[tuple[TestAttempt, int, int]]:
+        result = await self.session.execute(
+            select(
+                TestAttemptModel,
+                TestModel.time_limit,
+                func.count(QuestionModel.id).label("questions_count")
+            )
+            .join(TestModel, TestAttemptModel.test_id == TestModel.id)
+            .join(QuestionModel, QuestionModel.test_id == TestModel.id)
+            .where(TestAttemptModel.finished_at.is_(None))
+            .where(TestAttemptModel.warning_sent_at.is_(None))
+            .where(TestModel.time_limit.isnot(None))
+            .group_by(TestAttemptModel.id, TestModel.time_limit)
+        )
+        rows = result.all()
+        
+        needing_warning = []
+        for attempt_model, time_limit, questions_count in rows:
+            if time_limit and questions_count > 0:
+                elapsed = (now - attempt_model.started_at).total_seconds()
+                time_remaining = time_limit - elapsed
+                threshold = time_limit * 0.1
+                
+                if time_remaining <= threshold and time_remaining > 0:
+                    needing_warning.append((
+                        TestAttemptDTO(attempt_model).to_domain(),
+                        time_limit,
+                        questions_count
+                    ))
+        
+        return needing_warning
+
+    async def mark_warning_sent(self, attempt_id: int, sent_at: datetime) -> None:
+        await self.attempt_dao.update(attempt_id=attempt_id, warning_sent_at=sent_at)
+
+    async def get_group_test_statistics(
+        self, test_id: int, group_number: int
+    ) -> list[tuple[str, int | None, datetime | None, bool | None]]:
+        result = await self.session.execute(
+            select(
+                UserModel.name,
+                UserModel.first_name,
+                TestAttemptModel.score,
+                TestAttemptModel.finished_at,
+                TestAttemptModel.is_passed,
+            )
+            .select_from(UserModel)
+            .outerjoin(
+                TestAttemptModel,
+                (TestAttemptModel.user_id == UserModel.id) & 
+                (TestAttemptModel.test_id == test_id) &
+                (TestAttemptModel.finished_at.isnot(None))
+            )
+            .where(UserModel.group == group_number)
+            .order_by(UserModel.name, UserModel.first_name, TestAttemptModel.finished_at.desc())
+        )
+        rows = result.all()
+        
+        user_best: dict[str, tuple[int | None, datetime | None, bool | None]] = {}
+        for name, first_name, score, finished_at, is_passed in rows:
+            display_name = name or first_name
+            if display_name not in user_best:
+                user_best[display_name] = (score, finished_at, is_passed)
+            elif score is not None:
+                current_score = user_best[display_name][0]
+                if current_score is None or score > current_score:
+                    user_best[display_name] = (score, finished_at, is_passed)
+        
+        return [
+            (name, score, finished_at, is_passed)
+            for name, (score, finished_at, is_passed) in sorted(user_best.items())
+        ]

@@ -9,7 +9,6 @@ def now_msk() -> datetime:
 
 
 def now_msk_naive() -> datetime:
-    """Возвращает текущее время в МСК без timezone info (для сохранения в БД)."""
     return datetime.now(MSK_TZ).replace(tzinfo=None)
 
 

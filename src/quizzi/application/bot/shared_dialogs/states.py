@@ -15,10 +15,13 @@ class SharedTestsSG(StatesGroup):
     edit_menu = State()
     edit_password = State()
     edit_attempts = State()
+    edit_time_limit = State()
     edit_group = State()
     edit_expires = State()
     statistics = State()
     attempt_detail = State()
+    export_select_group = State()
+    delete_confirm = State()
 
 
 class SharedBroadcastSG(StatesGroup):
@@ -38,6 +41,7 @@ class SharedCreateTestSG(StatesGroup):
     input_description = State()
     input_password = State()
     input_attempts = State()
+    input_time_limit = State()
     input_expires_at = State()
     input_for_group = State()
     confirm_test_info = State()
