@@ -9,6 +9,7 @@ from dishka.integrations.aiogram_dialog import inject
 from quizzi.application.bot.user_dialogs.states import UserDeeplinkSG, UserMenuSG, UserRegistrationSG
 from quizzi.infrastructure.database.dao.group import GroupDAO
 from quizzi.infrastructure.database.dao.user import UserDAO
+from quizzi.infrastructure.utils.timezone import now_msk_naive
 
 
 @inject
@@ -35,11 +36,24 @@ async def on_name_input(
     start_data = manager.start_data or {}
     assert isinstance(start_data, dict)
     user_id = start_data.get("user_id")
+    has_groups = start_data.get("has_groups", True)
+    pending_test_id = start_data.get("pending_test_id")
+    
     if user_id:
-        await user_dao.update(user_id=user_id, name=name)
+        await user_dao.update(user_id=user_id, name=name, name_updated_at=now_msk_naive())
     
     manager.dialog_data["name"] = name
-    await manager.switch_to(UserRegistrationSG.select_group)
+    
+    if has_groups:
+        await manager.switch_to(UserRegistrationSG.select_group)
+    elif pending_test_id:
+        await manager.start(
+            UserDeeplinkSG.test_preview,
+            mode=StartMode.RESET_STACK,
+            data={"test_id": pending_test_id}
+        )
+    else:
+        await manager.start(UserMenuSG.main, mode=StartMode.RESET_STACK)
 
 
 @inject
@@ -66,7 +80,7 @@ async def on_group_selected(
     pending_test_id = start_data.get("pending_test_id")
     
     if user_id:
-        await user_dao.update(user_id=user_id, group=int(item_id))
+        await user_dao.update(user_id=user_id, group=int(item_id), group_updated_at=now_msk_naive())
     
     if pending_test_id:
         await manager.start(

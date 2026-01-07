@@ -12,7 +12,7 @@ from quizzi.infrastructure.database.models import QuestionType
 from quizzi.infrastructure.database.repo.test import TestRepository
 from quizzi.infrastructure.database.repo.test_attempt import TestAttemptRepository
 from quizzi.infrastructure.utils.rate_limiter import PasswordRateLimiter
-from quizzi.infrastructure.utils.timezone import now_msk_naive
+from quizzi.infrastructure.utils.timezone import now_msk_naive, to_msk
 
 
 @inject
@@ -20,12 +20,15 @@ async def get_deeplink_test_data(
     dialog_manager: DialogManager,
     test_dao: FromDishka[TestDAO],
     test_repo: FromDishka[TestRepository],
+    attempt_repo: FromDishka[TestAttemptRepository],
     **_kwargs,
 ):
+    assert dialog_manager.event.from_user is not None
     start_data = dialog_manager.start_data or {}
     assert isinstance(start_data, dict)
     test_id = start_data.get("test_id")
     error = start_data.get("error")
+    user_id = dialog_manager.event.from_user.id
     
     if error:
         return {"test_info": error, "can_start": False}
@@ -40,9 +43,16 @@ async def get_deeplink_test_data(
     
     questions_count = await test_repo.count_questions_in_test(test_id)
     
+    attempts = await attempt_repo.get_user_test_attempts(user_id, test_id)
+    finished_attempts = [a for a in attempts if a.finished_at]
+    
     password_str = "🔒 Требуется пароль" if test.password else "🔓 Без пароля"
-    attempts_str = f"🔄 Попыток: {test.attempts}" if test.attempts else "🔄 Попыток: ♾️"
+    attempts_str = f"🔄 Попыток: {len(finished_attempts)}/{test.attempts}" if test.attempts else f"🔄 Попыток: {len(finished_attempts)}/♾️"
     time_limit_str = f"⏱️ Время: {test.time_limit // 60} мин" if test.time_limit else "⏱️ Без лимита"
+    
+    expires_at_msk = to_msk(test.expires_at)
+    expires_str = f"📅 До {expires_at_msk.strftime('%d.%m.%Y %H:%M')}" if expires_at_msk else "📅 Без срока"
+    group_str = f"🎓 Для группы {test.for_group}" if test.for_group else "👥 Для всех"
     
     test_info = (
         f"<b>📝 {test.title}</b>\n\n"
@@ -50,7 +60,9 @@ async def get_deeplink_test_data(
         f"<b>Вопросов:</b> {questions_count}\n"
         f"{password_str}\n"
         f"{attempts_str}\n"
-        f"{time_limit_str}"
+        f"{time_limit_str}\n"
+        f"{expires_str}\n"
+        f"{group_str}"
     )
     
     return {"test_info": test_info, "can_start": True, "has_password": bool(test.password)}

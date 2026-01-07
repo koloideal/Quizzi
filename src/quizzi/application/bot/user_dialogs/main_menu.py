@@ -436,7 +436,7 @@ user_menu_dialog = Dialog(
         getter=get_test_detail,
     ),
     Window(
-        Const("<b>✏️ Изменение имени</b>\n\nВведите новое имя:"),
+        Const("<b>✏️ Изменение имени</b>\n\nВведите имя и фамилию:"),
         MessageInput(on_name_input),
         Button(Const("◀️ Назад"), id="back", on_click=on_back_to_main),
         state=UserMenuSG.edit_name,
