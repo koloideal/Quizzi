@@ -1,6 +1,5 @@
 import asyncio
 import functools
-import io
 from datetime import date, datetime, time
 
 from aiogram import Bot
@@ -11,18 +10,16 @@ from aiogram_dialog.widgets.kbd import Button, Calendar, Column, Row, ScrollingG
 from aiogram_dialog.widgets.text import Const, Format
 from dishka import FromDishka
 from dishka.integrations.aiogram_dialog import inject
-from openpyxl import Workbook
-from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 
 from quizzi.application.bot.shared_dialogs.states import SharedCreateTestSG, SharedTestsSG
 from quizzi.infrastructure.database.dao.group import GroupDAO
 from quizzi.infrastructure.database.dao.test import TestDAO
 from quizzi.infrastructure.database.repo.test import TestRepository
 from quizzi.infrastructure.database.repo.test_attempt import TestAttemptRepository
-from quizzi.infrastructure.utils.config import Config
 from quizzi.infrastructure.utils.qr_generator import generate_qr_bytes
-from quizzi.infrastructure.utils.test_id_to_hash import encode_id
 from quizzi.infrastructure.utils.timezone import to_msk
+from quizzi.service.excel import ExcelService
+from quizzi.service.test import TestService
 
 
 @inject
@@ -101,34 +98,38 @@ async def get_test_detail(test_dao: FromDishka[TestDAO], test_repo: FromDishka[T
 
 
 @inject
-async def on_toggle_active(_callback: CallbackQuery, _button: Button, manager: DialogManager, test_dao: FromDishka[TestDAO]):
+async def on_toggle_active(
+    _callback: CallbackQuery,
+    _button: Button,
+    manager: DialogManager,
+    test_service: FromDishka[TestService],
+):
     test_id = manager.dialog_data.get("selected_test_id")
     if not test_id:
         await _callback.answer("❌ Тест не найден")
         return
     
-    test = await test_dao.get_by_id(test_id)
-    
-    if test:
-        await test_dao.update(test_id, is_active=not test.is_active)
-        action = "деактивирован" if test.is_active else "активирован"
-        await _callback.answer(f"✅ Тест {action}")
+    result = await test_service.toggle_test_active(test_id)
+    await _callback.answer(result.message)
+    if result.success:
         await manager.switch_to(SharedTestsSG.test_detail)
 
 
 @inject
-async def on_toggle_results_viewable(_callback: CallbackQuery, _button: Button, manager: DialogManager, test_dao: FromDishka[TestDAO]):
+async def on_toggle_results_viewable(
+    _callback: CallbackQuery,
+    _button: Button,
+    manager: DialogManager,
+    test_service: FromDishka[TestService],
+):
     test_id = manager.dialog_data.get("selected_test_id")
     if not test_id:
         await _callback.answer("❌ Тест не найден")
         return
     
-    test = await test_dao.get_by_id(test_id)
-    
-    if test:
-        await test_dao.update(test_id, are_results_viewable=not test.are_results_viewable)
-        action = "скрыты" if test.are_results_viewable else "видны"
-        await _callback.answer(f"✅ Результаты теперь {action}")
+    result = await test_service.toggle_results_viewable(test_id)
+    await _callback.answer(result.message)
+    if result.success:
         await manager.switch_to(SharedTestsSG.test_detail)
 
 
@@ -235,7 +236,13 @@ async def on_export_stats(_callback: CallbackQuery, _button: Button, manager: Di
 
 
 @inject
-async def on_share_test(_callback: CallbackQuery, _button: Button, manager: DialogManager, config: FromDishka[Config], bot_inst: FromDishka[Bot]):
+async def on_share_test(
+    _callback: CallbackQuery,
+    _button: Button,
+    manager: DialogManager,
+    test_service: FromDishka[TestService],
+    bot_inst: FromDishka[Bot],
+):
     test_id = manager.dialog_data.get("selected_test_id")
     
     if not test_id:
@@ -243,11 +250,7 @@ async def on_share_test(_callback: CallbackQuery, _button: Button, manager: Dial
             "share_link": "Ошибка: тест не найден"
         }
     
-    test_hash = encode_id(
-        test_id, 
-        config.security.encode_key,
-        config.security.encoded_string_length
-    )
+    test_hash = test_service.encode_test_id(test_id)
     
     bot_info = await bot_inst.get_me()
     bot_username = bot_info.username or "your_bot"
@@ -314,13 +317,18 @@ async def get_delete_confirm_data(dialog_manager: DialogManager, test_dao: FromD
 
 
 @inject
-async def on_confirm_delete(_callback: CallbackQuery, _button: Button, manager: DialogManager, test_dao: FromDishka[TestDAO]):
+async def on_confirm_delete(
+    _callback: CallbackQuery,
+    _button: Button,
+    manager: DialogManager,
+    test_service: FromDishka[TestService],
+):
     test_id = manager.dialog_data.get("selected_test_id")
     if not test_id:
         await _callback.answer("❌ Тест не найден")
         return
     
-    deleted = await test_dao.delete(test_id)
+    deleted = await test_service.delete_test(test_id)
     if deleted:
         await _callback.answer("✅ Тест удалён")
         await manager.switch_to(SharedTestsSG.tests_list)
@@ -329,7 +337,12 @@ async def on_confirm_delete(_callback: CallbackQuery, _button: Button, manager: 
 
 
 @inject
-async def on_password_input(message: Message, _widget: MessageInput, manager: DialogManager, test_dao: FromDishka[TestDAO]):
+async def on_password_input(
+    message: Message,
+    _widget: MessageInput,
+    manager: DialogManager,
+    test_service: FromDishka[TestService],
+):
     test_id = manager.dialog_data.get("selected_test_id")
     if not test_id:
         await message.answer("❌ Тест не найден")
@@ -339,30 +352,36 @@ async def on_password_input(message: Message, _widget: MessageInput, manager: Di
         await message.answer("❌ Пароль не может быть пустым")
         return
     
-    password = message.text.strip()
-    if len(password) > 255:
-        await message.answer("❌ Пароль слишком длинный (максимум 255 символов)")
-        return
-    
-    await test_dao.update(test_id, password=password)
-    await message.answer("✅ Пароль обновлен")
-    await manager.switch_to(SharedTestsSG.test_detail)
+    result = await test_service.update_password(test_id, message.text.strip())
+    await message.answer(result.message)
+    if result.success:
+        await manager.switch_to(SharedTestsSG.test_detail)
 
 
 @inject
-async def on_remove_password(_callback: CallbackQuery, _button: Button, manager: DialogManager, test_dao: FromDishka[TestDAO]):
+async def on_remove_password(
+    _callback: CallbackQuery,
+    _button: Button,
+    manager: DialogManager,
+    test_service: FromDishka[TestService],
+):
     test_id = manager.dialog_data.get("selected_test_id")
     if not test_id:
         await _callback.answer("❌ Тест не найден")
         return
     
-    await test_dao.update(test_id, password=None)
-    await _callback.answer("✅ Пароль удален")
+    result = await test_service.remove_password(test_id)
+    await _callback.answer(result.message)
     await manager.switch_to(SharedTestsSG.test_detail)
 
 
 @inject
-async def on_attempts_input_edit(message: Message, _widget: MessageInput, manager: DialogManager, test_dao: FromDishka[TestDAO]):
+async def on_attempts_input_edit(
+    message: Message,
+    _widget: MessageInput,
+    manager: DialogManager,
+    test_service: FromDishka[TestService],
+):
     test_id = manager.dialog_data.get("selected_test_id")
     if not test_id:
         await message.answer("❌ Тест не найден")
@@ -373,40 +392,40 @@ async def on_attempts_input_edit(message: Message, _widget: MessageInput, manage
         return
     
     attempts_str = message.text.strip()
-    
     if not attempts_str.isdigit():
         await message.answer("❌ Количество попыток должно быть числом")
         return
     
-    attempts = int(attempts_str)
-    
-    if attempts < 1:
-        await message.answer("❌ Количество попыток должно быть больше 0")
-        return
-    
-    if attempts > 100:
-        await message.answer("❌ Количество попыток не может быть больше 100")
-        return
-    
-    await test_dao.update(test_id, attempts=attempts)
-    await message.answer("✅ Количество попыток обновлено")
-    await manager.switch_to(SharedTestsSG.test_detail)
+    result = await test_service.update_attempts(test_id, int(attempts_str))
+    await message.answer(result.message)
+    if result.success:
+        await manager.switch_to(SharedTestsSG.test_detail)
 
 
 @inject
-async def on_remove_attempts(_callback: CallbackQuery, _button: Button, manager: DialogManager, test_dao: FromDishka[TestDAO]):
+async def on_remove_attempts(
+    _callback: CallbackQuery,
+    _button: Button,
+    manager: DialogManager,
+    test_service: FromDishka[TestService],
+):
     test_id = manager.dialog_data.get("selected_test_id")
     if not test_id:
         await _callback.answer("❌ Тест не найден")
         return
     
-    await test_dao.update(test_id, attempts=None)
-    await _callback.answer("✅ Ограничение попыток удалено")
+    result = await test_service.remove_attempts(test_id)
+    await _callback.answer(result.message)
     await manager.switch_to(SharedTestsSG.test_detail)
 
 
 @inject
-async def on_time_limit_input(message: Message, _widget: MessageInput, manager: DialogManager, test_dao: FromDishka[TestDAO]):
+async def on_time_limit_input(
+    message: Message,
+    _widget: MessageInput,
+    manager: DialogManager,
+    test_service: FromDishka[TestService],
+):
     test_id = manager.dialog_data.get("selected_test_id")
     if not test_id:
         await message.answer("❌ Тест не найден")
@@ -417,36 +436,30 @@ async def on_time_limit_input(message: Message, _widget: MessageInput, manager: 
         return
     
     time_limit_str = message.text.strip()
-    
     if not time_limit_str.isdigit():
         await message.answer("❌ Лимит времени должен быть числом (в минутах)")
         return
     
-    time_limit_minutes = int(time_limit_str)
-    
-    if time_limit_minutes < 1:
-        await message.answer("❌ Лимит времени должен быть больше 0")
-        return
-    
-    if time_limit_minutes > 1440:
-        await message.answer("❌ Лимит времени не может быть больше 1440 минут (24 часа)")
-        return
-    
-    time_limit_seconds = time_limit_minutes * 60
-    await test_dao.update(test_id, time_limit=time_limit_seconds)
-    await message.answer("✅ Лимит времени обновлен")
-    await manager.switch_to(SharedTestsSG.test_detail)
+    result = await test_service.update_time_limit(test_id, int(time_limit_str))
+    await message.answer(result.message)
+    if result.success:
+        await manager.switch_to(SharedTestsSG.test_detail)
 
 
 @inject
-async def on_remove_time_limit(_callback: CallbackQuery, _button: Button, manager: DialogManager, test_dao: FromDishka[TestDAO]):
+async def on_remove_time_limit(
+    _callback: CallbackQuery,
+    _button: Button,
+    manager: DialogManager,
+    test_service: FromDishka[TestService],
+):
     test_id = manager.dialog_data.get("selected_test_id")
     if not test_id:
         await _callback.answer("❌ Тест не найден")
         return
     
-    await test_dao.update(test_id, time_limit=None)
-    await _callback.answer("✅ Лимит времени удален")
+    result = await test_service.remove_time_limit(test_id)
+    await _callback.answer(result.message)
     await manager.switch_to(SharedTestsSG.test_detail)
 
 
@@ -460,51 +473,73 @@ async def get_groups_for_edit(dialog_manager: DialogManager, group_dao: FromDish
 
 
 @inject
-async def on_group_selected_for_test(_callback: CallbackQuery, _widget, manager: DialogManager, item_id: str, test_dao: FromDishka[TestDAO]):
+async def on_group_selected_for_test(
+    _callback: CallbackQuery,
+    _widget,
+    manager: DialogManager,
+    item_id: str,
+    test_service: FromDishka[TestService],
+):
     test_id = manager.dialog_data.get("selected_test_id")
     if not test_id:
         await _callback.answer("❌ Тест не найден")
         return
     
-    await test_dao.update(test_id, for_group=int(item_id))
-    await _callback.answer("✅ Группа обновлена")
+    result = await test_service.update_group(test_id, int(item_id))
+    await _callback.answer(result.message)
     await manager.switch_to(SharedTestsSG.test_detail)
 
 
 @inject
-async def on_remove_group(_callback: CallbackQuery, _button: Button, manager: DialogManager, test_dao: FromDishka[TestDAO]):
+async def on_remove_group(
+    _callback: CallbackQuery,
+    _button: Button,
+    manager: DialogManager,
+    test_service: FromDishka[TestService],
+):
     test_id = manager.dialog_data.get("selected_test_id")
     if not test_id:
         await _callback.answer("❌ Тест не найден")
         return
     
-    await test_dao.update(test_id, for_group=None)
-    await _callback.answer("✅ Тест теперь доступен для всех групп")
+    result = await test_service.remove_group(test_id)
+    await _callback.answer(result.message)
     await manager.switch_to(SharedTestsSG.test_detail)
 
 
 @inject
-async def on_date_selected_for_test(_callback, _widget, manager: DialogManager, selected_date: date, test_dao: FromDishka[TestDAO]):
+async def on_date_selected_for_test(
+    _callback,
+    _widget,
+    manager: DialogManager,
+    selected_date: date,
+    test_service: FromDishka[TestService],
+):
     test_id = manager.dialog_data.get("selected_test_id")
     if not test_id:
         await _callback.answer("❌ Тест не найден")
         return
     
     expires_at = datetime.combine(selected_date, time.min)
-    await test_dao.update(test_id, expires_at=expires_at)
-    await _callback.answer("✅ Срок действия обновлен")
+    result = await test_service.update_expires(test_id, expires_at)
+    await _callback.answer(result.message)
     await manager.switch_to(SharedTestsSG.test_detail)
 
 
 @inject
-async def on_remove_expires(_callback: CallbackQuery, _button: Button, manager: DialogManager, test_dao: FromDishka[TestDAO]):
+async def on_remove_expires(
+    _callback: CallbackQuery,
+    _button: Button,
+    manager: DialogManager,
+    test_service: FromDishka[TestService],
+):
     test_id = manager.dialog_data.get("selected_test_id")
     if not test_id:
         await _callback.answer("❌ Тест не найден")
         return
     
-    await test_dao.update(test_id, expires_at=None)
-    await _callback.answer("✅ Срок действия удален")
+    result = await test_service.remove_expires(test_id)
+    await _callback.answer(result.message)
     await manager.switch_to(SharedTestsSG.test_detail)
 
 
@@ -525,115 +560,13 @@ async def get_groups_for_export(dialog_manager: DialogManager, group_dao: FromDi
     }
 
 
-def create_excel_report(
-    test_title: str,
-    group_number: int,
-    stats: list[tuple[str, int | None, datetime | None, bool | None]],
-) -> bytes:
-    wb = Workbook()
-    ws = wb.active
-    assert ws is not None
-    ws.title = "Статистика"
-    
-    header_font = Font(bold=True, color="FFFFFF")
-    header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
-    header_alignment = Alignment(horizontal="center", vertical="center")
-    thin_border = Border(
-        left=Side(style="thin"),
-        right=Side(style="thin"),
-        top=Side(style="thin"),
-        bottom=Side(style="thin"),
-    )
-    
-    ws.merge_cells("A1:E1")
-    ws["A1"] = f"Тест: {test_title}"
-    ws["A1"].font = Font(bold=True, size=14)
-    ws["A1"].alignment = Alignment(horizontal="center")
-    
-    ws.merge_cells("A2:E2")
-    ws["A2"] = f"Группа: {group_number}"
-    ws["A2"].font = Font(bold=True, size=12)
-    ws["A2"].alignment = Alignment(horizontal="center")
-    
-    headers = ["ФИО", "Результат (%)", "Оценка", "Дата прохождения", "Статус"]
-    for col, header in enumerate(headers, 1):
-        cell = ws.cell(row=4, column=col, value=header)
-        cell.font = header_font
-        cell.fill = header_fill
-        cell.alignment = header_alignment
-        cell.border = thin_border
-    
-    passed_fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")
-    failed_fill = PatternFill(start_color="FFC7CE", end_color="FFC7CE", fill_type="solid")
-    not_passed_fill = PatternFill(start_color="FFEB9C", end_color="FFEB9C", fill_type="solid")
-    
-    grades: list[int] = []
-    
-    for row_idx, (name, score, finished_at, is_passed) in enumerate(stats, 5):
-        ws.cell(row=row_idx, column=1, value=name).border = thin_border
-        
-        if score is not None:
-            ws.cell(row=row_idx, column=2, value=score).border = thin_border
-            
-            grade = score // 10
-            grades.append(grade)
-            ws.cell(row=row_idx, column=3, value=grade).border = thin_border
-            
-            finished_msk = to_msk(finished_at) if finished_at else None
-            date_str = finished_msk.strftime("%d.%m.%Y %H:%M") if finished_msk else "—"
-            ws.cell(row=row_idx, column=4, value=date_str).border = thin_border
-            status = "Пройден" if is_passed else "Не пройден"
-            status_cell = ws.cell(row=row_idx, column=5, value=status)
-            status_cell.border = thin_border
-            
-            for col in range(1, 6):
-                ws.cell(row=row_idx, column=col).fill = passed_fill if is_passed else failed_fill
-        else:
-            ws.cell(row=row_idx, column=2, value="—").border = thin_border
-            ws.cell(row=row_idx, column=3, value="—").border = thin_border
-            ws.cell(row=row_idx, column=4, value="—").border = thin_border
-            status_cell = ws.cell(row=row_idx, column=5, value="Не проходил")
-            status_cell.border = thin_border
-            
-            for col in range(1, 6):
-                ws.cell(row=row_idx, column=col).fill = not_passed_fill
-    
-    ws.column_dimensions["A"].width = 30
-    ws.column_dimensions["B"].width = 15
-    ws.column_dimensions["C"].width = 10
-    ws.column_dimensions["D"].width = 20
-    ws.column_dimensions["E"].width = 15
-    
-    total_users = len(stats)
-    passed_users = sum(1 for _, score, _, is_passed in stats if score is not None and is_passed)
-    attempted_users = sum(1 for _, score, _, _ in stats if score is not None)
-    
-    summary_row = len(stats) + 6
-    ws.cell(row=summary_row, column=1, value="Итого:").font = Font(bold=True)
-    ws.cell(row=summary_row + 1, column=1, value=f"Всего студентов: {total_users}")
-    ws.cell(row=summary_row + 2, column=1, value=f"Прошли тест: {attempted_users}")
-    ws.cell(row=summary_row + 3, column=1, value=f"Сдали: {passed_users}")
-    if attempted_users > 0:
-        success_rate = round(passed_users / attempted_users * 100)
-        ws.cell(row=summary_row + 4, column=1, value=f"Процент сдачи: {success_rate}%")
-    if grades:
-        avg_grade = round(sum(grades) / len(grades), 1)
-        ws.cell(row=summary_row + 5, column=1, value=f"Средняя оценка: {avg_grade}")
-    
-    output = io.BytesIO()
-    wb.save(output)
-    output.seek(0)
-    return output.read()
-
-
 @inject
 async def on_group_selected_for_export(
     _callback: CallbackQuery,
     _widget: Select,
     manager: DialogManager,
     item_id: str,
-    test_dao: FromDishka[TestDAO],
-    attempt_repo: FromDishka[TestAttemptRepository],
+    excel_service: FromDishka[ExcelService],
 ) -> None:
     test_id = manager.dialog_data.get("selected_test_id")
     if not test_id:
@@ -643,26 +576,16 @@ async def on_group_selected_for_export(
     assert _callback.message is not None
     await _callback.answer("⏳ Формирую отчёт...")
     
-    test = await test_dao.get_by_id(test_id)
-    if not test:
-        await _callback.message.answer("❌ Тест не найден")
-        return
-    
     group_number = int(item_id)
-    stats = await attempt_repo.get_group_test_statistics(test_id, group_number)
+    result = await excel_service.generate_group_report(test_id, group_number)
     
-    if not stats:
-        await _callback.message.answer(f"❌ В группе {group_number} нет студентов")
+    if not result.success or not result.data or not result.filename:
+        await _callback.message.answer(result.caption)
         return
-    
-    excel_bytes = create_excel_report(test.title, group_number, stats)
-    
-    safe_title = "".join(c if c.isalnum() or c in "-_" else "_" for c in test.title)[:30]
-    filename = f"{safe_title}_group_{group_number}.xlsx"
     
     await _callback.message.answer_document(
-        document=BufferedInputFile(excel_bytes, filename=filename),
-        caption=f"📊 <b>Статистика по тесту</b>\n\n📝 {test.title}\n🎓 Группа {group_number}",
+        document=BufferedInputFile(result.data, filename=result.filename),
+        caption=result.caption,
     )
 
 

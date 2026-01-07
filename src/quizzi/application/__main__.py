@@ -26,7 +26,7 @@ from quizzi.application.bot.user_dialogs.main_menu import user_menu_dialog
 from quizzi.application.bot.user_dialogs.registration import registration_dialog
 from quizzi.application.bot.user_dialogs.take_test import take_test_dialog
 from quizzi.infrastructure.database.repo.user import UserRepository
-from quizzi.infrastructure.di import DatabaseProvider, SchedulerProvider
+from quizzi.infrastructure.di import DatabaseProvider, SchedulerProvider, ServiceProvider
 from quizzi.infrastructure.utils.bot_commands import setup_bot_commands
 from quizzi.infrastructure.utils.config import Config
 
@@ -68,6 +68,7 @@ async def main() -> None:
     
     container = make_async_container(
         DatabaseProvider(),
+        ServiceProvider(),
         SchedulerProvider(),
         context={Bot: bot, Config: config}
     )

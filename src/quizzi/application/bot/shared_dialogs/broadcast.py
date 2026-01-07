@@ -7,8 +7,7 @@ from dishka import FromDishka
 from dishka.integrations.aiogram_dialog import inject
 
 from quizzi.application.bot.shared_dialogs.states import SharedBroadcastSG
-from quizzi.infrastructure.database.dao.user import UserDAO
-from quizzi.infrastructure.utils.broadcast import broadcast_message
+from quizzi.service.broadcast import BroadcastService
 
 
 async def on_broadcast_input(message: Message, _widget: MessageInput, manager: DialogManager):
@@ -18,7 +17,12 @@ async def on_broadcast_input(message: Message, _widget: MessageInput, manager: D
 
 
 @inject
-async def on_broadcast_confirm(_callback: CallbackQuery, _button: Button, manager: DialogManager, user_dao: FromDishka[UserDAO]):
+async def on_broadcast_confirm(
+    _callback: CallbackQuery,
+    _button: Button,
+    manager: DialogManager,
+    broadcast_service: FromDishka[BroadcastService],
+):
     message_id = manager.dialog_data.get("broadcast_message_id")
     chat_id = manager.dialog_data.get("broadcast_chat_id")
     
@@ -33,7 +37,7 @@ async def on_broadcast_confirm(_callback: CallbackQuery, _button: Button, manage
         await _callback.answer("Ошибка: бот не найден")
         return
     
-    stats = await broadcast_message(bot, message_id, chat_id, user_dao)
+    stats = await broadcast_service.broadcast_message(bot, message_id, chat_id)
     
     stats_text = (
         f"✅ <b>Рассылка завершена</b>\n\n"

@@ -20,6 +20,11 @@ from quizzi.infrastructure.database.repo.user import UserRepository
 from quizzi.infrastructure.scheduling.tasks import deactivate_expired_tests, finish_expired_test_attempts, send_time_warning_notifications
 from quizzi.infrastructure.utils.config import Config
 from quizzi.infrastructure.utils.rate_limiter import PasswordRateLimiter
+from quizzi.service.broadcast import BroadcastService
+from quizzi.service.excel import ExcelService
+from quizzi.service.test import TestService
+from quizzi.service.test_attempt import TestAttemptService
+from quizzi.service.user import UserService
 
 
 class DatabaseProvider(Provider):
@@ -78,6 +83,41 @@ class DatabaseProvider(Provider):
     @provide(scope=Scope.REQUEST)
     def get_test_attempt_repository(self, session: AsyncSession) -> TestAttemptRepository:
         return TestAttemptRepository(session)
+
+
+class ServiceProvider(Provider):
+    @provide(scope=Scope.REQUEST)
+    def get_user_service(self, user_dao: UserDAO, group_dao: GroupDAO) -> UserService:
+        return UserService(user_dao, group_dao)
+    
+    @provide(scope=Scope.REQUEST)
+    def get_test_service(
+        self,
+        test_dao: TestDAO,
+        test_repo: TestRepository,
+        attempt_repo: TestAttemptRepository,
+        user_dao: UserDAO,
+        config: Config,
+    ) -> TestService:
+        return TestService(test_dao, test_repo, attempt_repo, user_dao, config)
+    
+    @provide(scope=Scope.REQUEST)
+    def get_test_attempt_service(
+        self,
+        test_dao: TestDAO,
+        test_repo: TestRepository,
+        attempt_repo: TestAttemptRepository,
+        answer_dao: UserAnswerDAO,
+    ) -> TestAttemptService:
+        return TestAttemptService(test_dao, test_repo, attempt_repo, answer_dao)
+    
+    @provide(scope=Scope.REQUEST)
+    def get_broadcast_service(self, user_dao: UserDAO) -> BroadcastService:
+        return BroadcastService(user_dao)
+    
+    @provide(scope=Scope.REQUEST)
+    def get_excel_service(self, test_dao: TestDAO, attempt_repo: TestAttemptRepository) -> ExcelService:
+        return ExcelService(test_dao, attempt_repo)
 
 
 class SchedulerProvider(Provider):

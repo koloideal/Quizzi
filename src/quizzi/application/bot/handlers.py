@@ -10,36 +10,29 @@ from dishka.integrations.aiogram import FromDishka
 from quizzi.application.bot.admin_dialogs.states import AdminMenuSG
 from quizzi.application.bot.creator_dialogs.states import CreatorMenuSG
 from quizzi.application.bot.user_dialogs.states import UserDeeplinkSG, UserMenuSG, UserRegistrationSG
-from quizzi.infrastructure.database.dao.group import GroupDAO
-from quizzi.infrastructure.database.dao.test import TestDAO
-from quizzi.infrastructure.database.dao.user import UserDAO
-from quizzi.infrastructure.utils.config import Config
-from quizzi.infrastructure.utils.test_id_to_hash import decode_id
-from quizzi.infrastructure.utils.timezone import now_msk_naive
+from quizzi.service.test import TestService
+from quizzi.service.user import UserService
 
 router = Router()
 logger = logging.getLogger(__name__)
 
 
 async def ensure_user_registered(
-    user_dao: UserDAO,
-    group_dao: GroupDAO,
+    user_service: UserService,
     message: Message,
     dialog_manager: DialogManager,
     pending_test_id: int | None = None,
 ) -> bool:
     assert message.from_user is not None
     
-    existing_user = await user_dao.get_by_id(message.from_user.id)
-    groups = await group_dao.get_all()
-    has_groups = len(groups) > 0
+    result = await user_service.check_registration(message.from_user.id)
     
-    start_data = {"user_id": message.from_user.id, "has_groups": has_groups}
+    start_data = {"user_id": message.from_user.id, "has_groups": result.has_groups}
     if pending_test_id:
         start_data["pending_test_id"] = pending_test_id
     
-    if existing_user is None:
-        await user_dao.create(
+    if result.user is None:
+        await user_service.create_user(
             user_id=message.from_user.id,
             first_name=message.from_user.first_name,
             username=message.from_user.username,
@@ -52,10 +45,7 @@ async def ensure_user_registered(
         )
         return False
     
-    needs_name = existing_user.name is None
-    needs_group = has_groups and existing_user.group is None
-    
-    if needs_name:
+    if result.needs_name:
         await dialog_manager.start(
             UserRegistrationSG.input_name,
             mode=StartMode.RESET_STACK,
@@ -63,7 +53,7 @@ async def ensure_user_registered(
         )
         return False
     
-    if needs_group:
+    if result.needs_group:
         await dialog_manager.start(
             UserRegistrationSG.select_group,
             mode=StartMode.RESET_STACK,
@@ -71,7 +61,7 @@ async def ensure_user_registered(
         )
         return False
     
-    await user_dao.upsert(
+    await user_service.update_user_info(
         user_id=message.from_user.id,
         first_name=message.from_user.first_name,
         username=message.from_user.username,
@@ -80,39 +70,13 @@ async def ensure_user_registered(
     return True
 
 
-async def validate_deeplink_test(
-    test_dao: TestDAO,
-    user_dao: UserDAO,
-    test_id: int,
-    user_id: int,
-) -> tuple[bool, str]:
-    test = await test_dao.get_by_id(test_id)
-    
-    if not test:
-        return False, "❌ Тест не найден"
-    
-    if not test.is_active:
-        return False, "❌ Тест деактивирован"
-    
-    if test.expires_at and test.expires_at < now_msk_naive():
-        return False, "❌ Срок действия теста истек"
-    
-    user = await user_dao.get_by_id(user_id)
-    if test.for_group and user and user.group != test.for_group:
-        return False, f"❌ Тест доступен только для группы {test.for_group}"
-    
-    return True, ""
-
-
 @router.message(CommandStart(deep_link=True))
 async def start_with_deeplink(
     message: Message,
     command: CommandObject,
     dialog_manager: DialogManager,
-    user_dao: FromDishka[UserDAO],
-    group_dao: FromDishka[GroupDAO],
-    test_dao: FromDishka[TestDAO],
-    config: FromDishka[Config],
+    user_service: FromDishka[UserService],
+    test_service: FromDishka[TestService],
 ) -> None:
     assert message.from_user is not None
     
@@ -125,39 +89,36 @@ async def start_with_deeplink(
     )
     
     if not deeplink:
-        await start_handler(message, user_dao, group_dao, dialog_manager)
+        await start_handler(message, user_service, dialog_manager)
         return
     
-    try:
-        test_id = decode_id(deeplink, config.security.encode_key)
-    except (ValueError, IndexError):
+    test_id = test_service.decode_test_hash(deeplink)
+    if test_id is None:
         logger.warning("Invalid deeplink: user_id=%d, deeplink=%s", message.from_user.id, deeplink)
         await message.answer("❌ Неверная ссылка на тест")
-        await start_handler(message, user_dao, group_dao, dialog_manager)
+        await start_handler(message, user_service, dialog_manager)
         return
     
     is_registered = await ensure_user_registered(
-        user_dao, group_dao, message, dialog_manager, pending_test_id=test_id
+        user_service, message, dialog_manager, pending_test_id=test_id
     )
     
     if not is_registered:
         return
     
-    is_valid, error = await validate_deeplink_test(
-        test_dao, user_dao, test_id, message.from_user.id
-    )
+    validation = await test_service.validate_test(test_id, message.from_user.id)
     
-    if not is_valid:
+    if not validation.is_valid:
         logger.info(
             "Test validation failed: user_id=%d, test_id=%d, error=%s",
             message.from_user.id,
             test_id,
-            error,
+            validation.error,
         )
         await dialog_manager.start(
             UserDeeplinkSG.test_preview,
             mode=StartMode.RESET_STACK,
-            data={"test_id": test_id, "error": error}
+            data={"test_id": test_id, "error": validation.error}
         )
         return
     
@@ -173,8 +134,7 @@ async def start_with_deeplink(
 async def start_handler(
     message: Message,
     dialog_manager: DialogManager,
-    user_dao: FromDishka[UserDAO],
-    group_dao: FromDishka[GroupDAO],
+    user_service: FromDishka[UserService],
 ) -> None:
     assert message.from_user is not None
     logger.info(
@@ -184,7 +144,7 @@ async def start_handler(
     )
     
     is_registered = await ensure_user_registered(
-        user_dao, group_dao, message, dialog_manager
+        user_service, message, dialog_manager
     )
     
     if is_registered:
