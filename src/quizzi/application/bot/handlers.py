@@ -32,8 +32,9 @@ async def ensure_user_registered(
     
     existing_user = await user_dao.get_by_id(message.from_user.id)
     groups = await group_dao.get_all()
+    has_groups = len(groups) > 0
     
-    start_data = {"user_id": message.from_user.id}
+    start_data = {"user_id": message.from_user.id, "has_groups": has_groups}
     if pending_test_id:
         start_data["pending_test_id"] = pending_test_id
     
@@ -44,28 +45,30 @@ async def ensure_user_registered(
             username=message.from_user.username,
             last_name=message.from_user.last_name,
         )
-        if len(groups) > 0:
-            await dialog_manager.start(
-                UserRegistrationSG.input_name,
-                mode=StartMode.RESET_STACK,
-                data=start_data
-            )
-            return False
-        return True
+        await dialog_manager.start(
+            UserRegistrationSG.input_name,
+            mode=StartMode.RESET_STACK,
+            data=start_data
+        )
+        return False
     
-    if len(groups) > 0 and (existing_user.name is None or existing_user.group is None):
-        if existing_user.name is None:
-            await dialog_manager.start(
-                UserRegistrationSG.input_name,
-                mode=StartMode.RESET_STACK,
-                data=start_data
-            )
-        else:
-            await dialog_manager.start(
-                UserRegistrationSG.select_group,
-                mode=StartMode.RESET_STACK,
-                data=start_data
-            )
+    needs_name = existing_user.name is None
+    needs_group = has_groups and existing_user.group is None
+    
+    if needs_name:
+        await dialog_manager.start(
+            UserRegistrationSG.input_name,
+            mode=StartMode.RESET_STACK,
+            data=start_data
+        )
+        return False
+    
+    if needs_group:
+        await dialog_manager.start(
+            UserRegistrationSG.select_group,
+            mode=StartMode.RESET_STACK,
+            data=start_data
+        )
         return False
     
     await user_dao.upsert(
