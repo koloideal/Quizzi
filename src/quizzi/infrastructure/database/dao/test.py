@@ -41,7 +41,7 @@ class TestDAO:
     
     async def get_all(self) -> list[DomainTest]:
         result = await self.session.execute(
-            select(Test).order_by(Test.created_at.desc())
+            select(Test).order_by(Test.is_active.desc(), Test.created_at.desc())
         )
         models = list(result.scalars().all())
         return [TestDTO(model).to_domain() for model in models]

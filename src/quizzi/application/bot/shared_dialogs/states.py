@@ -21,6 +21,7 @@ class SharedTestsSG(StatesGroup):
     statistics = State()
     attempt_detail = State()
     export_select_group = State()
+    delete_confirm = State()
 
 
 class SharedBroadcastSG(StatesGroup):

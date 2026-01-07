@@ -299,6 +299,35 @@ async def on_edit_expires(_callback: CallbackQuery, _button: Button, manager: Di
     await manager.switch_to(SharedTestsSG.edit_expires)
 
 
+async def on_delete_test(_callback: CallbackQuery, _button: Button, manager: DialogManager):
+    await manager.switch_to(SharedTestsSG.delete_confirm)
+
+
+@inject
+async def get_delete_confirm_data(dialog_manager: DialogManager, test_dao: FromDishka[TestDAO], **_kwargs):
+    test_id = dialog_manager.dialog_data.get("selected_test_id")
+    if not test_id:
+        return {"test_title": "Неизвестный тест"}
+    
+    test = await test_dao.get_by_id(test_id)
+    return {"test_title": test.title if test else "Неизвестный тест"}
+
+
+@inject
+async def on_confirm_delete(_callback: CallbackQuery, _button: Button, manager: DialogManager, test_dao: FromDishka[TestDAO]):
+    test_id = manager.dialog_data.get("selected_test_id")
+    if not test_id:
+        await _callback.answer("❌ Тест не найден")
+        return
+    
+    deleted = await test_dao.delete(test_id)
+    if deleted:
+        await _callback.answer("✅ Тест удалён")
+        await manager.switch_to(SharedTestsSG.tests_list)
+    else:
+        await _callback.answer("❌ Не удалось удалить тест")
+
+
 @inject
 async def on_password_input(message: Message, _widget: MessageInput, manager: DialogManager, test_dao: FromDishka[TestDAO]):
     test_id = manager.dialog_data.get("selected_test_id")
@@ -689,6 +718,7 @@ shared_tests_dialog = Dialog(
             Button(Const("⏱️ Лимит времени"), id="edit_time_limit", on_click=on_edit_time_limit),
             Button(Const("👥 Группа"), id="edit_group", on_click=on_edit_group),
             Button(Const("📅 Срок действия"), id="edit_expires", on_click=on_edit_expires),
+            Button(Const("🗑 Удалить тест"), id="delete_test", on_click=on_delete_test),
             Button(Const("◀️ Назад"), id="back", on_click=on_back_to_detail),
         ),
         state=SharedTestsSG.edit_menu,
@@ -794,5 +824,14 @@ shared_tests_dialog = Dialog(
         Button(Const("◀️ Назад"), id="back", on_click=on_back_to_detail),
         state=SharedTestsSG.export_select_group,
         getter=get_groups_for_export,
+    ),
+    Window(
+        Format("<b>🗑 Удаление теста</b>\n\n⚠️ Вы уверены, что хотите удалить тест <b>{test_title}</b>?\n\n<i>Будут удалены все вопросы, варианты ответов и результаты прохождений.</i>"),
+        Row(
+            Button(Const("✅ Да, удалить"), id="confirm_delete", on_click=on_confirm_delete),
+            Button(Const("❌ Отмена"), id="cancel_delete", on_click=on_back_to_edit_menu),
+        ),
+        state=SharedTestsSG.delete_confirm,
+        getter=get_delete_confirm_data,
     ),
 )

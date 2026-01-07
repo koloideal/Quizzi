@@ -63,6 +63,11 @@ class Test(Base):
         cascade="all, delete-orphan",
         order_by="Question.position"
     )
+    
+    test_attempts: Mapped[list["TestAttempt"]] = relationship(
+        back_populates="test",
+        cascade="all, delete-orphan",
+    )
 
 
 @final
@@ -110,7 +115,7 @@ class TestAttempt(Base):
     is_passed: Mapped[bool] = mapped_column(default=False)
     
     user: Mapped["User"] = relationship()
-    test: Mapped["Test"] = relationship()
+    test: Mapped["Test"] = relationship(back_populates="test_attempts")
     answers: Mapped[list["UserAnswer"]] = relationship(
         back_populates="attempt",
         cascade="all, delete-orphan"
