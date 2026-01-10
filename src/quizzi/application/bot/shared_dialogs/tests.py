@@ -544,7 +544,7 @@ async def on_remove_expires(
 
 
 async def on_add_test_clicked(_callback: CallbackQuery, _button: Button, manager: DialogManager):
-    await manager.start(SharedCreateTestSG.input_title, mode=StartMode.RESET_STACK)
+    await manager.start(SharedCreateTestSG.input_title)
 
 
 async def on_back_clicked(_callback: CallbackQuery, _button: Button, manager: DialogManager):
