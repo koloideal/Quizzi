@@ -482,7 +482,7 @@ async def on_cancel(_callback: CallbackQuery, _button: Button, manager: DialogMa
 
 
 async def on_back_to_menu(_callback: CallbackQuery, _button: Button, manager: DialogManager):
-    await manager.done()
+    await manager.start(SharedTestsSG.tests_list, mode=StartMode.RESET_STACK)
 
 
 shared_create_test_dialog = Dialog(
