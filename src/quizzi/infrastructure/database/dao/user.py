@@ -40,6 +40,13 @@ class UserDAO:
         models = list(result.scalars().all())
         return [UserDTO(model).to_domain() for model in models]
     
+    async def get_by_groups(self, group_numbers: list[int]) -> list[DomainUser]:
+        result = await self.session.execute(
+            select(User).where(User.group.in_(group_numbers)).order_by(User.created_at.desc())
+        )
+        models = list(result.scalars().all())
+        return [UserDTO(model).to_domain() for model in models]
+    
     async def create(
         self,
         user_id: int,

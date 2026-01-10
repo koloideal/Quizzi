@@ -10,6 +10,7 @@ from dishka import FromDishka
 from dishka.integrations.aiogram_dialog import inject
 
 from quizzi.application.bot.creator_dialogs.states import CreatorUsersSG
+from quizzi.infrastructure.database.dao.group import GroupDAO
 from quizzi.infrastructure.database.dao.user import UserDAO
 from quizzi.infrastructure.database.repo.test import TestRepository
 from quizzi.infrastructure.database.repo.test_attempt import TestAttemptRepository
@@ -20,9 +21,20 @@ from quizzi.infrastructure.utils.timezone import to_msk
 
 
 @inject
-async def get_users_data(user_dao: FromDishka[UserDAO], **_kwargs):
-    users = await user_dao.get_all()
+async def get_users_data(dialog_manager: DialogManager, user_dao: FromDishka[UserDAO], group_dao: FromDishka[GroupDAO], **_kwargs):
+    filter_group = dialog_manager.dialog_data.get("filter_group")
+    
+    if filter_group:
+        users = await user_dao.get_by_groups([filter_group])
+    else:
+        users = await user_dao.get_all()
+    
     users_sorted = sorted(users, key=lambda u: u.created_at or u.id, reverse=True)
+    
+    groups = await group_dao.get_all()
+    has_groups = len(groups) > 0
+    
+    filter_text = f" (группа {filter_group})" if filter_group else ""
     
     return {
         "users": [
@@ -30,7 +42,35 @@ async def get_users_data(user_dao: FromDishka[UserDAO], **_kwargs):
             for u in users_sorted
         ],
         "count": len(users_sorted),
+        "has_groups": has_groups,
+        "filter_text": filter_text,
     }
+
+
+@inject
+async def get_groups_filter_data(group_dao: FromDishka[GroupDAO], **_kwargs):
+    groups = await group_dao.get_all()
+    return {
+        "groups": [(str(g.id), str(g.number)) for g in groups],
+    }
+
+
+async def on_filter_group_click(_callback: CallbackQuery, _button: Button, manager: DialogManager):
+    await manager.switch_to(CreatorUsersSG.filter_by_group)
+
+
+@inject
+async def on_group_filter_selected(_callback: CallbackQuery, _widget, manager: DialogManager, item_id: str, group_dao: FromDishka[GroupDAO]):
+    groups = await group_dao.get_all()
+    group = next((g for g in groups if str(g.id) == item_id), None)
+    if group:
+        manager.dialog_data["filter_group"] = group.number
+    await manager.switch_to(CreatorUsersSG.users_list)
+
+
+async def on_clear_filter(_callback: CallbackQuery, _button: Button, manager: DialogManager):
+    manager.dialog_data.pop("filter_group", None)
+    await manager.switch_to(CreatorUsersSG.users_list)
 
 
 @inject
@@ -331,7 +371,7 @@ async def get_user_result_detail(
 
 creator_users_dialog = Dialog(
     Window(
-        Format("<b>👥 Пользователи</b>\n\nВсего: {count}"),
+        Format("<b>👥 Пользователи</b>{filter_text}\n\nВсего: {count}"),
         ScrollingGroup(
             Select(
                 Format("{item[0]}"),
@@ -345,11 +385,33 @@ creator_users_dialog = Dialog(
             height=7,
         ),
         Column(
+            Button(Const("🔍 Фильтр по группе"), id="filter_group", on_click=on_filter_group_click, when="has_groups"),
             Button(Const("✏️ Ввести ID/Username"), id="input_mode", on_click=on_input_mode),
             Button(Const("◀️ Назад"), id="back", on_click=on_back_to_main),
         ),
         state=CreatorUsersSG.users_list,
         getter=get_users_data,
+    ),
+    Window(
+        Const("<b>🔍 Фильтр по группе</b>\n\nВыберите группу:"),
+        ScrollingGroup(
+            Select(
+                Format("{item[1]}"),
+                id="group_filter_select",
+                item_id_getter=lambda x: x[0],
+                items="groups",
+                on_click=on_group_filter_selected,
+            ),
+            id="groups_filter_scroll",
+            width=2,
+            height=5,
+        ),
+        Column(
+            Button(Const("🗑 Сбросить фильтр"), id="clear_filter", on_click=on_clear_filter),
+            SwitchTo(Const("◀️ Назад"), id="back_to_list", state=CreatorUsersSG.users_list),
+        ),
+        state=CreatorUsersSG.filter_by_group,
+        getter=get_groups_filter_data,
     ),
     Window(
         Const("<b>Введите ID или @username пользователя:</b>"),
