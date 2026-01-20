@@ -25,10 +25,20 @@ from quizzi.application.bot.user_dialogs.deeplink import deeplink_dialog
 from quizzi.application.bot.user_dialogs.main_menu import user_menu_dialog
 from quizzi.application.bot.user_dialogs.registration import registration_dialog
 from quizzi.application.bot.user_dialogs.take_test import take_test_dialog
+from quizzi.infrastructure.database.repo.test import TestRepository
 from quizzi.infrastructure.database.repo.user import UserRepository
 from quizzi.infrastructure.di import DatabaseProvider, SchedulerProvider, ServiceProvider
 from quizzi.infrastructure.utils.bot_commands import setup_bot_commands
 from quizzi.infrastructure.utils.config import Config
+
+
+async def cleanup_tests_without_questions(container) -> None:
+    """Удаляет тесты без вопросов при старте бота"""
+    async with container() as request_container:
+        test_repo = await request_container.get(TestRepository)
+        deleted_count = await test_repo.delete_tests_without_questions()
+        if deleted_count > 0:
+            logging.info(f"Удалено тестов без вопросов: {deleted_count}")
 
 
 async def main() -> None:
@@ -78,6 +88,8 @@ async def main() -> None:
     async with container() as request_container:
         user_repo = await request_container.get(UserRepository)
         await setup_bot_commands(bot, config, user_repo)
+    
+    await cleanup_tests_without_questions(container)
     
     scheduler = await container.get(AsyncIOScheduler)
     scheduler.start()

@@ -206,3 +206,23 @@ class TestRepository:
         result = await self.session.execute(query)
         models = list(result.scalars().all())
         return [TestDTO(model).to_domain() for model in models]
+    
+    async def delete_tests_without_questions(self) -> int:
+        """Удаляет тесты без вопросов и возвращает количество удалённых тестов"""
+        subquery = (
+            select(QuestionModel.test_id)
+            .group_by(QuestionModel.test_id)
+            .subquery()
+        )
+        
+        result = await self.session.execute(
+            select(TestModel)
+            .where(TestModel.id.notin_(select(subquery)))
+        )
+        tests_to_delete = list(result.scalars().all())
+        
+        for test in tests_to_delete:
+            await self.session.delete(test)
+        
+        await self.session.flush()
+        return len(tests_to_delete)
