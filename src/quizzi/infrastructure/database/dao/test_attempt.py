@@ -34,6 +34,7 @@ class TestAttemptDAO:
         attempt = TestAttempt(
             user_id=user_id,
             test_id=test_id,
+            started_at=datetime.utcnow(),
             score=score,
             is_passed=is_passed,
         )

@@ -12,6 +12,10 @@ def now_msk_naive() -> datetime:
     return datetime.now(MSK_TZ).replace(tzinfo=None)
 
 
+def now_utc_naive() -> datetime:
+    return datetime.utcnow()
+
+
 def to_msk(dt: datetime | None) -> datetime | None:
     if dt is None:
         return None

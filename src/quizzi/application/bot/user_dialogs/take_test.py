@@ -18,7 +18,7 @@ from quizzi.infrastructure.database.dao.user_answer import UserAnswerDAO
 from quizzi.infrastructure.database.repo.test import TestRepository
 from quizzi.infrastructure.database.repo.test_attempt import TestAttemptRepository
 from quizzi.infrastructure.utils.rate_limiter import PasswordRateLimiter
-from quizzi.infrastructure.utils.timezone import now_msk_naive
+from quizzi.infrastructure.utils.timezone import now_utc_naive
 
 
 async def get_state_for_question_type(question_type: str):
@@ -33,7 +33,7 @@ async def get_state_for_question_type(question_type: str):
 def get_remaining_time(started_at: datetime, time_limit: int) -> int | None:
     if not time_limit:
         return None
-    elapsed = (now_msk_naive() - started_at).total_seconds()
+    elapsed = (now_utc_naive() - started_at).total_seconds()
     remaining = time_limit - elapsed
     return max(0, int(remaining))
 
@@ -308,7 +308,7 @@ async def start_test_directly(
         return
     
     attempt = await attempt_repo.attempt_dao.create(user_id=user_id, test_id=test_id)
-    started_at = now_msk_naive()
+    started_at = now_utc_naive()
     
     first_question, _ = await test_repo.get_question_with_options(questions[0].id)
     first_state = await get_state_for_question_type(first_question.question_type if first_question else QuestionType.SINGLE)
@@ -364,7 +364,7 @@ async def on_password_input(
             return
         
         attempt = await attempt_repo.attempt_dao.create(user_id=message.from_user.id, test_id=test_id)
-        started_at = now_msk_naive()
+        started_at = now_utc_naive()
         
         first_question, _ = await test_repo.get_question_with_options(questions[0].id)
         first_state = await get_state_for_question_type(first_question.question_type if first_question else QuestionType.SINGLE)

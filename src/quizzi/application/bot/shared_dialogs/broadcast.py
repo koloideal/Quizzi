@@ -1,5 +1,3 @@
-from typing import TYPE_CHECKING
-
 from aiogram.types import CallbackQuery, Message
 from aiogram_dialog import Dialog, DialogManager, Window
 from aiogram_dialog.widgets.input import MessageInput
