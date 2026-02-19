@@ -36,6 +36,7 @@ async def on_password_input(
         await message.answer(
             f"❌ Слишком много попыток. Попробуйте через {minutes} мин {seconds} сек"
         )
+        await manager.done()
         return
     
     password = message.text.strip()
