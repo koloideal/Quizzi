@@ -1,6 +1,7 @@
 [bot]
 token = "1234567890"
 creator_id = 1234567890
+admin_password = "your_admin_password"
 
 [security]
 encode_key = "encode_key"

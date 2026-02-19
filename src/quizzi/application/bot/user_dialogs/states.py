@@ -30,3 +30,7 @@ class UserDeeplinkSG(StatesGroup):
 class UserRegistrationSG(StatesGroup):
     input_name = State()
     select_group = State()
+
+
+class UserAdminLoginSG(StatesGroup):
+    password_input = State()

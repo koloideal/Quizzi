@@ -25,6 +25,7 @@ from quizzi.application.bot.user_dialogs.deeplink import deeplink_dialog
 from quizzi.application.bot.user_dialogs.main_menu import user_menu_dialog
 from quizzi.application.bot.user_dialogs.registration import registration_dialog
 from quizzi.application.bot.user_dialogs.take_test import take_test_dialog
+from quizzi.application.bot.user_dialogs.admin_login import admin_login_dialog
 from quizzi.infrastructure.database.repo.test import TestRepository
 from quizzi.infrastructure.database.repo.user import UserRepository
 from quizzi.infrastructure.di import DatabaseProvider, SchedulerProvider, ServiceProvider
@@ -62,6 +63,7 @@ async def main() -> None:
         take_test_dialog,
         registration_dialog,
         deeplink_dialog,
+        admin_login_dialog,
         shared_tests_dialog,
         shared_groups_dialog,
         shared_broadcast_dialog,
