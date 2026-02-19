@@ -9,7 +9,7 @@ from quizzi.infrastructure.database.dao.test import TestDAO
 from quizzi.infrastructure.database.dao.user_answer import UserAnswerDAO
 from quizzi.infrastructure.database.repo.test import TestRepository
 from quizzi.infrastructure.database.repo.test_attempt import TestAttemptRepository
-from quizzi.infrastructure.utils.timezone import now_msk_naive
+from quizzi.infrastructure.utils.timezone import now_utc_naive
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +18,7 @@ async def deactivate_expired_tests(container: AsyncContainer) -> None:
     async with container() as request_container:
         test_dao = await request_container.get(TestDAO)
         
-        expired_tests = await test_dao.get_expired_active_tests(now_msk_naive())
+        expired_tests = await test_dao.get_expired_active_tests(now_utc_naive())
         
         for test in expired_tests:
             await test_dao.update(test.id, is_active=False)
@@ -31,7 +31,7 @@ async def finish_expired_test_attempts(container: AsyncContainer, bot: Bot) -> N
         test_repo = await request_container.get(TestRepository)
         answer_dao = await request_container.get(UserAnswerDAO)
         
-        now = now_msk_naive()
+        now = now_utc_naive()
         expired_attempts = await attempt_repo.get_expired_active_attempts(now)
         
         for attempt, _ in expired_attempts:
@@ -91,7 +91,7 @@ async def send_time_warning_notifications(container: AsyncContainer, bot: Bot) -
         attempt_repo = await request_container.get(TestAttemptRepository)
         test_repo = await request_container.get(TestRepository)
         
-        now = now_msk_naive()
+        now = now_utc_naive()
         attempts_needing_warning = await attempt_repo.get_attempts_needing_warning(now)
         
         for attempt, time_limit, questions_count in attempts_needing_warning:

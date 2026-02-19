@@ -9,7 +9,7 @@ from dishka.integrations.aiogram_dialog import inject
 from quizzi.application.bot.user_dialogs.states import UserDeeplinkSG, UserMenuSG, UserRegistrationSG
 from quizzi.infrastructure.database.dao.group import GroupDAO
 from quizzi.infrastructure.database.dao.user import UserDAO
-from quizzi.infrastructure.utils.timezone import now_msk_naive
+from quizzi.infrastructure.utils.timezone import now_utc_naive
 
 
 @inject
@@ -40,7 +40,7 @@ async def on_name_input(
     pending_test_id = start_data.get("pending_test_id")
     
     if user_id:
-        await user_dao.update(user_id=user_id, name=name, name_updated_at=now_msk_naive())
+        await user_dao.update(user_id=user_id, name=name, name_updated_at=now_utc_naive())
     
     manager.dialog_data["name"] = name
     
@@ -80,7 +80,7 @@ async def on_group_selected(
     pending_test_id = start_data.get("pending_test_id")
     
     if user_id:
-        await user_dao.update(user_id=user_id, group=int(item_id), group_updated_at=now_msk_naive())
+        await user_dao.update(user_id=user_id, group=int(item_id), group_updated_at=now_utc_naive())
     
     if pending_test_id:
         await manager.start(

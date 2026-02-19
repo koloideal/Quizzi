@@ -196,7 +196,7 @@ async def on_start_test(
         await _callback.answer("❌ Тест деактивирован")
         return
     
-    if test.expires_at and test.expires_at < now_msk_naive():
+    if test.expires_at and test.expires_at < now_utc_naive():
         await _callback.answer("❌ Срок действия теста истек")
         return
     

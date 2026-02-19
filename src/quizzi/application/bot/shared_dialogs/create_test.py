@@ -1,4 +1,4 @@
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timezone
 
 from aiogram.types import CallbackQuery, ContentType, Message
 from aiogram_dialog import Dialog, DialogManager, StartMode, Window
@@ -139,7 +139,8 @@ async def on_skip_time_limit(_callback: CallbackQuery, _button: Button, manager:
 
 
 async def on_date_selected(_callback, _widget, manager: DialogManager, selected_date: date):
-    manager.dialog_data["expires_at"] = datetime.combine(selected_date, time.min)
+    expires_at = datetime.combine(selected_date, time.min, tzinfo=timezone.utc).replace(tzinfo=None)
+    manager.dialog_data["expires_at"] = expires_at
     await manager.switch_to(SharedCreateTestSG.input_for_group)
 
 

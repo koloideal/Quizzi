@@ -1,6 +1,6 @@
 import asyncio
 import functools
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timezone
 
 from aiogram import Bot
 from aiogram.types import BufferedInputFile, CallbackQuery, Message
@@ -520,7 +520,7 @@ async def on_date_selected_for_test(
         await _callback.answer("❌ Тест не найден")
         return
     
-    expires_at = datetime.combine(selected_date, time.min)
+    expires_at = datetime.combine(selected_date, time.min, tzinfo=timezone.utc).replace(tzinfo=None)
     result = await test_service.update_expires(test_id, expires_at)
     await _callback.answer(result.message)
     await manager.switch_to(SharedTestsSG.test_detail)
