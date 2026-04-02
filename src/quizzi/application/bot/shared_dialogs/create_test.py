@@ -1,9 +1,9 @@
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timezone
 
 from aiogram.types import CallbackQuery, ContentType, Message
 from aiogram_dialog import Dialog, DialogManager, StartMode, Window
 from aiogram_dialog.widgets.input import MessageInput
-from aiogram_dialog.widgets.kbd import Button, Calendar, Cancel, Column, Row, ScrollingGroup, Select
+from aiogram_dialog.widgets.kbd import Button, Calendar, Column, Row, ScrollingGroup, Select
 from aiogram_dialog.widgets.text import Const, Format
 from dishka import FromDishka
 from dishka.integrations.aiogram_dialog import inject
@@ -139,7 +139,8 @@ async def on_skip_time_limit(_callback: CallbackQuery, _button: Button, manager:
 
 
 async def on_date_selected(_callback, _widget, manager: DialogManager, selected_date: date):
-    manager.dialog_data["expires_at"] = datetime.combine(selected_date, time.min)
+    expires_at = datetime.combine(selected_date, time.min, tzinfo=timezone.utc).replace(tzinfo=None)
+    manager.dialog_data["expires_at"] = expires_at
     await manager.switch_to(SharedCreateTestSG.input_for_group)
 
 
@@ -481,11 +482,15 @@ async def on_cancel(_callback: CallbackQuery, _button: Button, manager: DialogMa
     await manager.start(SharedTestsSG.tests_list, mode=StartMode.RESET_STACK)
 
 
+async def on_back_to_menu(_callback: CallbackQuery, _button: Button, manager: DialogManager):
+    await manager.done()
+
+
 shared_create_test_dialog = Dialog(
     Window(
         Const("<b>📝 Создание теста</b>\n\n💬 <b>Введите название теста:</b>\n<i>(максимум 255 символов)</i>"),
         MessageInput(on_title_input),
-        Cancel(Const("◀️ Отмена")),
+        Button(Const("◀️ Отмена"), id="back", on_click=on_back_to_menu),
         state=SharedCreateTestSG.input_title,
     ),
     Window(

@@ -9,7 +9,7 @@ from dishka.integrations.aiogram import FromDishka
 
 from quizzi.application.bot.admin_dialogs.states import AdminMenuSG
 from quizzi.application.bot.creator_dialogs.states import CreatorMenuSG
-from quizzi.application.bot.user_dialogs.states import UserDeeplinkSG, UserMenuSG, UserRegistrationSG
+from quizzi.application.bot.user_dialogs.states import UserAdminLoginSG, UserDeeplinkSG, UserMenuSG, UserRegistrationSG
 from quizzi.service.test import TestService
 from quizzi.service.user import UserService
 
@@ -163,6 +163,13 @@ async def creator_command(_message: Message, dialog_manager: DialogManager) -> N
     assert _message.from_user is not None
     logger.info("Creator panel access: user_id=%d", _message.from_user.id)
     await dialog_manager.start(CreatorMenuSG.main, mode=StartMode.RESET_STACK)
+
+
+@router.message(Command("admin_login"))
+async def admin_login_command(_message: Message, dialog_manager: DialogManager) -> None:
+    assert _message.from_user is not None
+    logger.info("Admin login attempt: user_id=%d", _message.from_user.id)
+    await dialog_manager.start(UserAdminLoginSG.password_input, mode=StartMode.RESET_STACK)
 
 
 @router.error()

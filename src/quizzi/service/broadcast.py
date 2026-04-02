@@ -22,8 +22,12 @@ class BroadcastService:
         bot: Bot,
         message_id: int,
         from_chat_id: int,
+        group_numbers: list[int] | None = None,
     ) -> BroadcastStats:
-        users = await self._user_dao.get_all()
+        if group_numbers:
+            users = await self._user_dao.get_by_groups(group_numbers)
+        else:
+            users = await self._user_dao.get_all()
         
         total = len(users)
         success = 0

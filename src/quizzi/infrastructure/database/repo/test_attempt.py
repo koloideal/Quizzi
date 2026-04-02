@@ -15,7 +15,7 @@ from quizzi.infrastructure.database.models import Test as TestModel
 from quizzi.infrastructure.database.models import TestAttempt as TestAttemptModel
 from quizzi.infrastructure.database.models import User as UserModel
 from quizzi.infrastructure.database.models import UserAnswer as UserAnswerModel
-from quizzi.infrastructure.utils.timezone import now_msk_naive
+from quizzi.infrastructure.utils.timezone import now_utc_naive
 
 
 @final
@@ -135,7 +135,7 @@ class TestAttemptRepository:
     async def finish_attempt(self, attempt_id: int, score: int, is_passed: bool) -> TestAttempt | None:
         return await self.attempt_dao.update(
             attempt_id=attempt_id,
-            finished_at=now_msk_naive(),
+            finished_at=now_utc_naive(),
             score=score,
             is_passed=is_passed
         )

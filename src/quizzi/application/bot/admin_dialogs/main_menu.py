@@ -25,7 +25,7 @@ async def on_groups_clicked(_callback: CallbackQuery, _button: Button, manager: 
 
 
 async def on_broadcast_clicked(_callback: CallbackQuery, _button: Button, manager: DialogManager) -> None:
-    await manager.start(SharedBroadcastSG.broadcast_input)
+    await manager.start(SharedBroadcastSG.select_groups)
 
 
 async def on_templates_clicked(_callback: CallbackQuery, _button: Button, manager: DialogManager) -> None:

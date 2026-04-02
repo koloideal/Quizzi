@@ -8,7 +8,7 @@ from quizzi.infrastructure.database.repo.test import TestRepository
 from quizzi.infrastructure.database.repo.test_attempt import TestAttemptRepository
 from quizzi.infrastructure.utils.config import Config
 from quizzi.infrastructure.utils.test_id_to_hash import decode_id, encode_id
-from quizzi.infrastructure.utils.timezone import now_msk_naive
+from quizzi.infrastructure.utils.timezone import now_utc_naive
 
 
 @dataclass
@@ -68,7 +68,7 @@ class TestService:
         if not test.is_active:
             return TestValidationResult(is_valid=False, error="❌ Тест деактивирован", test=test)
         
-        if test.expires_at and test.expires_at < now_msk_naive():
+        if test.expires_at and test.expires_at < now_utc_naive():
             return TestValidationResult(is_valid=False, error="❌ Срок действия теста истек", test=test)
         
         user = await self._user_dao.get_by_id(user_id)
@@ -90,7 +90,7 @@ class TestService:
         if not test.is_active:
             return TestAccessResult(can_access=False, error="❌ Тест деактивирован")
         
-        if test.expires_at and test.expires_at < now_msk_naive():
+        if test.expires_at and test.expires_at < now_utc_naive():
             return TestAccessResult(can_access=False, error="❌ Срок действия теста истек")
         
         if test.attempts:

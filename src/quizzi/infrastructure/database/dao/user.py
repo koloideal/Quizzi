@@ -8,13 +8,6 @@ from quizzi.infrastructure.database.dto.user import UserDTO
 from quizzi.infrastructure.database.models import User
 
 
-class _UNSET:
-    pass
-
-
-UNSET = _UNSET()
-
-
 class UserDAO:
     def __init__(self, session: AsyncSession) -> None:
         self.session: AsyncSession = session
@@ -36,6 +29,13 @@ class UserDAO:
     async def get_all(self) -> list[DomainUser]:
         result = await self.session.execute(
             select(User).order_by(User.created_at.desc())
+        )
+        models = list(result.scalars().all())
+        return [UserDTO(model).to_domain() for model in models]
+    
+    async def get_by_groups(self, group_numbers: list[int]) -> list[DomainUser]:
+        result = await self.session.execute(
+            select(User).where(User.group.in_(group_numbers)).order_by(User.created_at.desc())
         )
         models = list(result.scalars().all())
         return [UserDTO(model).to_domain() for model in models]
@@ -67,14 +67,14 @@ class UserDAO:
     async def update(
         self,
         user_id: int,
-        username: str | None | _UNSET = UNSET,
-        first_name: str | _UNSET = UNSET,
-        last_name: str | None | _UNSET = UNSET,
-        name: str | None | _UNSET = UNSET,
-        group: int | None | _UNSET = UNSET,
-        is_admin: bool | _UNSET = UNSET,
-        name_updated_at: datetime | None | _UNSET = UNSET,
-        group_updated_at: datetime | None | _UNSET = UNSET,
+        username: str | None = None,
+        first_name: str | None = None,
+        last_name: str | None = None,
+        name: str | None = None,
+        group: int | None = None,
+        is_admin: bool | None = None,
+        name_updated_at: datetime | None = None,
+        group_updated_at: datetime | None = None,
     ) -> DomainUser | None:
         result = await self.session.execute(
             select(User).where(User.id == user_id)
@@ -83,21 +83,21 @@ class UserDAO:
         if not user:
             return None
         
-        if not isinstance(username, _UNSET):
+        if username is not None:
             user.username = username
-        if not isinstance(first_name, _UNSET):
+        if first_name is not None:
             user.first_name = first_name
-        if not isinstance(last_name, _UNSET):
+        if last_name is not None:
             user.last_name = last_name
-        if not isinstance(name, _UNSET):
+        if name is not None:
             user.name = name
-        if not isinstance(group, _UNSET):
+        if group is not None:
             user.group = group
-        if not isinstance(is_admin, _UNSET):
+        if is_admin is not None:
             user.is_admin = is_admin
-        if not isinstance(name_updated_at, _UNSET):
+        if name_updated_at is not None:
             user.name_updated_at = name_updated_at
-        if not isinstance(group_updated_at, _UNSET):
+        if group_updated_at is not None:
             user.group_updated_at = group_updated_at
         
         await self.session.flush()
@@ -122,9 +122,9 @@ class UserDAO:
         first_name: str,
         username: str | None = None,
         last_name: str | None = None,
-        name: str | None | _UNSET = UNSET,
-        group: int | None | _UNSET = UNSET,
-        is_admin: bool | _UNSET = UNSET,
+        name: str | None = None,
+        group: int | None = None,
+        is_admin: bool | None = None,
     ) -> DomainUser:
         result = await self.session.execute(
             select(User).where(User.id == user_id)
@@ -135,11 +135,11 @@ class UserDAO:
             user.username = username
             user.first_name = first_name
             user.last_name = last_name
-            if not isinstance(name, _UNSET):
+            if name is not None:
                 user.name = name
-            if not isinstance(group, _UNSET):
+            if group is not None:
                 user.group = group
-            if not isinstance(is_admin, _UNSET):
+            if is_admin is not None:
                 user.is_admin = is_admin
             await self.session.flush()
             await self.session.refresh(user)
@@ -150,7 +150,7 @@ class UserDAO:
             username=username,
             first_name=first_name,
             last_name=last_name,
-            name=name if not isinstance(name, _UNSET) else None,
-            group=group if not isinstance(group, _UNSET) else None,
-            is_admin=is_admin if not isinstance(is_admin, _UNSET) else False,
+            name=name,
+            group=group,
+            is_admin=is_admin if is_admin is not None else False,
         )

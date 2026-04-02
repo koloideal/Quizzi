@@ -8,6 +8,7 @@ from typing import Self
 class BotConfig:
     token: str
     creator_id: int
+    admin_password: str
 
 
 @dataclass
@@ -47,7 +48,8 @@ class Config:
         return cls(
             bot=BotConfig(
                 token=str(bot_data["token"]),
-                creator_id=int(bot_data["creator_id"])
+                creator_id=int(bot_data["creator_id"]),
+                admin_password=str(bot_data["admin_password"])
             ),
             database=DatabaseConfig(
                 host=str(db_data["host"]),

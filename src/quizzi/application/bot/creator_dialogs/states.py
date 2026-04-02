@@ -7,6 +7,7 @@ class CreatorMenuSG(StatesGroup):
 
 class CreatorUsersSG(StatesGroup):
     users_list = State()
+    filter_by_group = State()
     users_input = State()
     user_detail = State()
     user_stats = State()

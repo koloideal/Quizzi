@@ -12,7 +12,7 @@ from quizzi.infrastructure.database.models import QuestionType
 from quizzi.infrastructure.database.repo.test import TestRepository
 from quizzi.infrastructure.database.repo.test_attempt import TestAttemptRepository
 from quizzi.infrastructure.utils.rate_limiter import PasswordRateLimiter
-from quizzi.infrastructure.utils.timezone import now_msk_naive, to_msk
+from quizzi.infrastructure.utils.timezone import now_utc_naive, to_msk
 
 
 @inject
@@ -137,7 +137,7 @@ async def start_test_without_password(
         return
     
     attempt = await attempt_repo.attempt_dao.create(user_id=user_id, test_id=test_id)
-    started_at = now_msk_naive()
+    started_at = now_utc_naive()
     
     first_question, _ = await test_repo.get_question_with_options(questions[0].id)
     

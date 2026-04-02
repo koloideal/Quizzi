@@ -8,6 +8,7 @@ def new_session_maker(db_url: str) -> async_sessionmaker[AsyncSession]:
         max_overflow=15,
         connect_args={
             "timeout": 5,
+            "server_settings": {"timezone": "UTC"},
         },
     )
     return async_sessionmaker(engine, class_=AsyncSession, autoflush=False, expire_on_commit=False)

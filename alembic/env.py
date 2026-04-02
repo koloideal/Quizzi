@@ -59,11 +59,10 @@ def do_run_migrations(connection: Connection):
 
 
 async def run_async_migrations() -> None:
-    """In this scenario we need to create an Engine
-    and associate a connection with the context.
-
-    """
-    connectable = create_async_engine(db_config.url)
+    connectable = create_async_engine(
+        db_config.url,
+        connect_args={"server_settings": {"timezone": "UTC"}},
+    )
 
     async with connectable.connect() as connection:
         await connection.run_sync(do_run_migrations)

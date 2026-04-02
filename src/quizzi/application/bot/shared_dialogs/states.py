@@ -25,6 +25,7 @@ class SharedTestsSG(StatesGroup):
 
 
 class SharedBroadcastSG(StatesGroup):
+    select_groups = State()
     broadcast_input = State()
     broadcast_confirm = State()
 

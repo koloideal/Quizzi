@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -34,6 +34,7 @@ class TestAttemptDAO:
         attempt = TestAttempt(
             user_id=user_id,
             test_id=test_id,
+            started_at=datetime.now(timezone.utc).replace(tzinfo=None),
             score=score,
             is_passed=is_passed,
         )

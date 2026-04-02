@@ -6,7 +6,7 @@ from quizzi.infrastructure.database.dao.test import TestDAO
 from quizzi.infrastructure.database.dao.user_answer import UserAnswerDAO
 from quizzi.infrastructure.database.repo.test import TestRepository
 from quizzi.infrastructure.database.repo.test_attempt import TestAttemptRepository
-from quizzi.infrastructure.utils.timezone import now_msk_naive
+from quizzi.infrastructure.utils.timezone import now_utc_naive
 
 
 @dataclass
@@ -56,7 +56,7 @@ class TestAttemptService:
             return AttemptStartResult(success=False, error="❌ В тесте нет вопросов")
         
         attempt = await self._attempt_repo.attempt_dao.create(user_id=user_id, test_id=test_id)
-        started_at = now_msk_naive()
+        started_at = now_utc_naive()
         
         return AttemptStartResult(
             success=True,
